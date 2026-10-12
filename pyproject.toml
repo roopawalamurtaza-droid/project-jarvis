@@ -1,0 +1,40 @@
+[build-system]
+requires = ["hatchling==1.27.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "project-jarvis"
+version = "0.1.0"
+description = "A local-first, permission-controlled Windows AI assistant"
+requires-python = ">=3.12,<3.14"
+dependencies = [
+  "fastapi>=0.115,<1",
+  "httpx>=0.28,<0.29",
+  "pydantic>=2.10,<3",
+  "PySide6>=6.8,<7",
+  "uvicorn>=0.34,<1",
+  "sounddevice>=0.5,<0.6",
+  "numpy>=2,<3",
+]
+
+[project.optional-dependencies]
+voice = ["faster-whisper>=1.1,<2"]
+dev = ["pytest>=9.0.3,<10", "ruff>=0.11,<1", "pip-audit>=2.9,<3"]
+package = ["pyinstaller>=6.12,<7"]
+
+[project.scripts]
+jarvis = "jarvis.__main__:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/jarvis"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I"]
+
