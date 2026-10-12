@@ -82,6 +82,11 @@ actual packaged GUI/service/STT/TTS. It generates clearly labeled speech, opens
 no microphone, and launches apps only when `--verification-actions` is supplied.
 Reports are local ignored files. Final package outcome is recorded in NEXT_STEPS.md.
 
+The first frozen GUI smoke passed, but its runpy-based voice diagnostic failed
+because copied scripts did not cause PyInstaller to analyze imports such as
+`wave`. Packaging now explicitly analyzes both diagnostic modules. This is a
+packaging fix; source-only success was not accepted as packaged verification.
+
 ## Using the repaired application
 
 Launch **Start JARVIS.cmd**. In Settings confirm version 0.2.0, final build commit

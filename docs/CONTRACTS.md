@@ -1,5 +1,14 @@
 # Phase 1 integration contracts
 
+These original interfaces are retained below as historical context. Phase 2 adds
+`HandsFreeInput` events to `VoiceController` and the pure `VoiceSession` state
+machine. See ARCHITECTURE.md and PROJECT_HANDOFF.md for the current implementation.
+`VoiceInput.prepare()` primes the offline model; `SpeechOutput.speak()` reports
+acceptance and emits one completion callback per utterance, stop or error.
+Natural human commands route through the existing task permission boundary;
+the predefined app list now also includes Chrome. Hands-free and spoken replies
+are separate explicit opt-ins, with microphone capture closed on mute/pause.
+
 Python 3.12+, src layout. Desktop uses the service directly on worker threads;
 optional FastAPI reuses that service, listens on 127.0.0.1 and requires a bearer token.
 No shell tool, no cloud fallback, no implicit uploads. UI strings are plain text.

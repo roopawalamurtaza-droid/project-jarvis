@@ -16,6 +16,31 @@ Push-to-talk ─── sounddevice ─── offline faster-whisper ─── re
 Replies ─── Qt TextToSpeech ─── installed Windows voice / default output device
 ```
 
+## Phase 2 voice path
+
+The original push-to-talk path remains available. Opt-in hands-free listening adds
+`HandsFreeInput`: 16 kHz mono capture, bounded 20 ms frames, WebRTC VAD plus an RMS
+floor, endpoint silence, then offline Whisper transcription. The wake baseline
+matches the configured phrase in that local transcript; it is not a separate
+keyword neural model. A single transcription worker discards stale generations.
+
+`VoiceController` delivers bounded events to the Qt thread and drives the pure
+`VoiceSession` state machine: wake listening, activation, command listening,
+processing, speaking, follow-up listening, sleeping, muted, idle and error.
+Natural commands use `JarvisService` and the existing permission engine. Follow-ups
+retain the same session until timeout or a sleep command. Speech normalization
+removes markup before Windows playback; a selected Qt output device is supported.
+
+Default playback gates recognition and discards captured frames; mute/pause closes
+the physical stream. This half-duplex boundary avoids self-wake but provides no
+acoustic echo cancellation. Optional headset-only stop recognition remains
+experimental. Saving settings never overrides a user's later mute or pause.
+
+`health.py` reports package/model/backend readiness without capturing audio. Frozen
+builds embed version, branch, full Git commit, UTC date and source hashes. Settings
+shows that identity, executable path, live voice/device states and the last startup
+error. Frontend and backend are the same packaged process.
+
 ## Module boundaries
 
 `config.py` validates non-secret settings. `secrets.py` separates credentials.
