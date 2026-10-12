@@ -3,14 +3,16 @@
 Launch `C:\Jarvis\Start JARVIS.cmd`; it uses `dist\JARVIS\JARVIS.exe` and `.local`.
 Source edits require rebuilding the executable with `scripts\package.ps1`.
 
-1. In Settings, inspect version, Git commit, build time and executable path.
+1. On the Assistant screen, check **Speak replies** beside **Hold to talk**.
+   This checkbox is not inside the Settings form.
+2. In Settings, inspect version, Git commit, build time and executable path.
    Run startup health check. Ollama and the selected model should be ready.
-2. Refresh audio devices; choose microphone, voice and speaker.
-3. Enable Speak replies, check **Allow hands-free microphone listening on this
+3. Refresh audio devices; choose microphone, voice and speaker.
+4. Check **Allow hands-free microphone listening on this
    PC**, and save. This authorizes listening now and after restart.
-4. Say **Hey Jarvis**, wait for acknowledgment, then speak. Or say **Hey Jarvis,
+5. Say **Hey Jarvis**, wait for acknowledgment, then speak. Or say **Hey Jarvis,
    what time is it?** in one utterance. Follow-ups need no wake phrase for 20 seconds.
-5. **Thanks, Jarvis. Go to sleep.** returns to passive wake detection. Thanks
+6. **Thanks, Jarvis. Go to sleep.** returns to passive wake detection. Thanks
    inside a continuing request does not end the conversation.
 
 The indicator distinguishes active input, gated input with a stream still open,

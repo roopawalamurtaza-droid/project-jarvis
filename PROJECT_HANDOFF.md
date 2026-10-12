@@ -9,9 +9,9 @@ for the user's report of an old executable appearing unchanged.
 A Windows desktop companion with local-first conversation, explicit memory,
 opt-in hands-free voice, and narrow permission-controlled actions. Calm concise
 wording, honest execution evidence and user control take precedence over fictional
-capability claims. Phase 1 works; Phase 2 voice source is implemented and tested.
-Packaging/update verification and safe handoff are the current active work.
-Human acoustic accuracy and fresh-machine distribution acceptance remain open.
+capability claims. Phase 1 works; Phase 2 voice is implemented, packaged and tested.
+The user confirmed the repaired live hands-free demonstration on this Windows PC.
+Broader acoustic accuracy and fresh-machine distribution acceptance remain open.
 
 ## Repository and actual state
 
@@ -19,8 +19,9 @@ Private repository: https://github.com/roopawalamurtaza-droid/project-jarvis
 
 Working branch: `feature/handsfree-voice`. `main` preserves the Phase 1 checkpoint
 `b3f3c37`. The repository was created private during this handoff. No secrets or
-live user data belong in it. The exact final commit is recorded by Git, the
-packaged `build_info.json`, and the export MANIFEST.json. NEXT_STEPS.md states
+live user data belong in it. The runtime build commit is recorded in packaged
+`build_info.json`; the final handoff-only commit is Git HEAD and export MANIFEST.json.
+Runtime sources are unchanged by that documentation checkpoint. NEXT_STEPS.md states
 whether pushes actually succeeded; repository creation alone is not a push.
 
 There was only one committed Phase 1 snapshot when the user reported the update
@@ -131,8 +132,8 @@ Native STT cannot safely be killed; bounded shutdown discards late output.
 Tests distinguish fakes, synthetic speech, and real hardware. See TESTING.md,
 docs/SPEECH_QUALITY.md, docs/WAKE_ENGINES.md and final NEXT_STEPS.md.
 
-- Latest pre-handoff full suite: 280 passed in 41.81s (more final health/export
-  tests may be added; use final record). Security/path/junction/DPAPI/storage,
+- Final full suite: 283 passed in 39.96s; final focused health/export checks also
+  passed. Security/path/junction/DPAPI/storage,
   mocked providers/API, offscreen GUI, audio framing/state/permission regressions.
 - Actual local qwen3:8b response through the GUI, same-session follow-up, no Hold
   button, and Windows playback verified using generated PCM. A measured sample
@@ -147,8 +148,10 @@ docs/SPEECH_QUALITY.md, docs/WAKE_ENGINES.md and final NEXT_STEPS.md.
   selection and actual Qt start/stop/completion passed, exactly two callbacks.
   First Speaking event 0.078s; scheduled stop at 0.700s completed at 0.719s.
   Engine state is not human acoustic onset/audibility evidence.
-- Human spoken Chrome/VS Code conversation remains to be verified. Synthetic
-  authorized action and packaged checks are recorded in UPDATE_REPAIR.md.
+- Frozen GUI and voice diagnostics passed. The user confirmed hearing the live
+  wake/time reply and completing Chrome/VS Code follow-up and compound sleep.
+  This user report is distinct from agent measurements or a recorded acoustic test.
+  Further room/noise/device/fresh-machine coverage remains open.
 
 ## Dependencies and environment
 
@@ -170,6 +173,7 @@ for local Ollama/voice. Do not put variable values, tokens or keys in this docum
 PowerShell, in the checkout (examples assume C:\Jarvis):
 
 ```powershell
+git clone -b feature/handsfree-voice https://github.com/roopawalamurtaza-droid/project-jarvis.git C:\Jarvis
 cd C:\Jarvis
 .\scripts\setup.ps1
 .\.venv\Scripts\python.exe -m jarvis --data-dir .local --doctor
@@ -186,6 +190,11 @@ cd C:\Jarvis
 .\dist\JARVIS\JARVIS.exe --data-dir C:\Jarvis\.local --verify-voice-update --verification-actions
 .\.venv\Scripts\python.exe scripts\export_handoff.py
 ```
+
+Run the clone command only on a new machine/empty destination. The GitHub default
+branch remains Phase 1 main; always choose feature/handsfree-voice to continue
+this implementation. Authentication/access for another account must be granted
+by the repository owner; private source is not publicly downloadable.
 
 Install `uv` from its official vendor if absent; setup uses `uv sync --frozen`
 voice/dev/package extras. For local AI, install official Ollama, start `ollama

@@ -55,6 +55,12 @@ tests successfully; these restrictions were not treated as application failures.
 
 ## Real execution evidence
 
+Phase 2 final record: **283 passed**, frozen GUI smoke and complete frozen voice
+diagnostic both exit 0. The user confirmed an audible live wake/time reply and
+the full Chrome/VS Code follow-up/sleep sequence after enabling Speak replies.
+See NEXT_STEPS.md for exact build identity, timings, packaging fixes and limits.
+Generated PCM measurements and user-reported live acceptance remain distinct.
+
 - Ollama `qwen3:8b` returned **I am JARVIS.** through the shared service.
 - The desktop's actual Send worker displayed that response while its GUI timer
   continued firing. A warm run took 2.078 seconds with 19 UI timer callbacks.

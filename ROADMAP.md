@@ -13,11 +13,13 @@
 | 8 | Release | Signed distribution/update process, fresh-machine tests, performance and accessibility review |
 
 Phase 2 hands-free voice is now implemented in the existing application. The
-current milestone is packaging/update verification and developer handoff.
+current milestone is a verified packaged update and developer handoff, with the
+user's live hands-free demonstration confirmed on this PC.
 Dedicated keyword detection, human acoustic accuracy acceptance, desktop context,
 durable scheduling, coding workflows and all later runtime/business features
 remain incomplete. The original Phase 2 desktop-context row above is a later
-milestone, distinct from the user's completed Phase 2 voice implementation.
+milestone, distinct from the user's Phase 2 voice implementation and its measured
+acceptance boundaries.
 Full phase acceptance is recorded in TESTING.md rather than inferred from source
 code or interface mockups. The first version uses explicit tools, not autonomous
 model action planning. Cloud credentials, monetary budgets, streaming and broader

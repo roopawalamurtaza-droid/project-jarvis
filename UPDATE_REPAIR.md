@@ -89,9 +89,10 @@ packaging fix; source-only success was not accepted as packaged verification.
 
 ## Using the repaired application
 
-Launch **Start JARVIS.cmd**. In Settings confirm version 0.2.0, final build commit
+Launch **Start JARVIS.cmd**. In Settings confirm version 0.2.0, runtime build commit
 and path `C:\Jarvis\dist\JARVIS\JARVIS.exe`. Refresh/select devices; turn on
-Speak replies and the hands-free microphone checkbox, then Save. For a friendly
+the hands-free microphone checkbox. On Assistant turn on **Speak replies** beside
+**Hold to talk**, then return to Settings and Save. For a friendly
 time-aware greeting choose friendly. Actual local time determines the wording.
 
 Say Hey Jarvis, wait until playback ends and input is active, then Open Chrome,
@@ -103,7 +104,13 @@ if AI fails, start Ollama/select an installed model and rerun health. If an olde
 window remains, use its Exit before replacing the complete build folder. No old
 instance was killed during this repair. No administrator installation is needed.
 
-Remaining local verification: have the user speak this sequence on the actual
-microphone, check false wakes/natural pauses and hearing, verify punctuation with
-the user's selected voice, and test a second Windows installation. This session
-cannot fabricate that human demonstration or certify acoustic accuracy.
+After the replacement launched, the user reported recognized words but no speech.
+The saved speech flag remained false. The initial instructions placed Speak
+replies in Settings, but its actual checkbox is on Assistant; this documentation
+error was corrected. Enabling it produced an audible wake/time reply, and the
+user then confirmed the entire requested Chrome/VS Code/follow-up/sleep sequence
+works. The enabled speech preference was saved without replacing other settings.
+
+Remaining verification: broader false wakes/natural pauses, punctuation with the
+user's selected voice and a second Windows installation. The user's report is
+live acceptance evidence, not an agent acoustic recording or broad accuracy study.

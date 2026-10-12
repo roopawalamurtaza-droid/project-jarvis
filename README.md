@@ -26,14 +26,21 @@ Ollama must be running. In Settings, select your model, permitted folders,
 microphone and Windows voice. Hold **Hold to talk**, release to transcribe, review
 the text, and press **Send**. Turn on **Speak replies** to hear answers.
 
-For hands-free use, open **Settings**, refresh audio devices, choose a microphone
-and speaker, check **Allow hands-free microphone listening on this PC**, enable
-**Speak replies**, then save. Say **Hey Jarvis**, wait for the acknowledgment,
+For hands-free use, check **Speak replies** on the **Assistant** screen beside
+**Hold to talk**. Open **Settings**, refresh audio devices, choose a microphone
+and speaker, check **Allow hands-free microphone listening on this PC**, then
+save. Say **Hey Jarvis**, wait for the acknowledgment,
 and speak. Follow-ups work for 20 seconds by default. Pause and Mute close capture.
 See [the voice guide](docs/HANDS_FREE.md) for tuning and verification limits.
 
 Settings shows version, Git commit, build time, executable path, and live startup
 health. Source edits require rebuilding: the launcher runs `dist\JARVIS\JARVIS.exe`.
+
+The repaired 0.2.0 runtime build is commit `6170121a85af`, packaged on
+12 October 2026 at 21:53:26 UTC. Automated tests (283), frozen voice checks and the
+user's live Chrome/VS Code follow-up/sleep demonstration passed. Later handoff
+documentation commits retain the same runtime source hashes. See NEXT_STEPS.md
+for the exact executable identity, artifacts and remaining acceptance boundaries.
 
 ## What works
 
