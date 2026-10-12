@@ -1,12 +1,12 @@
 # Project JARVIS
 
-A native Windows assistant with real local AI conversation, push-to-talk voice,
+A native Windows assistant with real local AI conversation, opt-in hands-free voice,
 Windows speech, local memory, and narrowly scoped desktop actions.
 
 The first development build uses PySide6, a shared Python service, SQLite and an
 optional authenticated FastAPI interface. Ollama is the default. OpenAI and Gemini
 adapters are available after the user configures a key, model and cloud consent.
-No cloud fallback or automatic microphone recording occurs.
+No cloud fallback occurs. Passive microphone capture requires saved opt-in.
 
 ## Start on this computer
 
@@ -26,10 +26,21 @@ Ollama must be running. In Settings, select your model, permitted folders,
 microphone and Windows voice. Hold **Hold to talk**, release to transcribe, review
 the text, and press **Send**. Turn on **Speak replies** to hear answers.
 
+For hands-free use, open **Settings**, refresh audio devices, choose a microphone
+and speaker, check **Allow hands-free microphone listening on this PC**, enable
+**Speak replies**, then save. Say **Hey Jarvis**, wait for the acknowledgment,
+and speak. Follow-ups work for 20 seconds by default. Pause and Mute close capture.
+See [the voice guide](docs/HANDS_FREE.md) for tuning and verification limits.
+
+Settings shows version, Git commit, build time, executable path, and live startup
+health. Source edits require rebuilding: the launcher runs `dist\JARVIS\JARVIS.exe`.
+
 ## What works
 
 - Real text responses from an installed local model; bounded requests and interruption.
 - Offline Whisper transcription and selectable Windows speech voices.
+- Local wake phrase + WebRTC VAD, automatic requests, follow-up sessions, timezone
+  greetings, normalized speech, speaker/rate controls and optional login startup.
 - Explicit saved memory with search, editing, deletion and export.
 - Conversation history saved only when enabled, with retention and deletion controls.
 - Five tools: list a folder, read UTF-8 text, open Explorer, launch a supported app,
@@ -46,10 +57,11 @@ Actions use the **Activity** form or exact commands such as:
 /remember preferences editor VS Code
 ```
 
-The model proposes actions in ordinary conversation. It does not execute its own
-text. Tool execution requires the local form or `/tool` command; approvals are
-reviewed in Activity. This deliberate Phase 1 limit keeps model output out of the
-execution boundary. Read results remain local and are not added to cloud chat.
+Exact human requests such as **Open Chrome**, **And open VS Code**, or **Open my
+downloads folder** route through the existing permission engine. Downloads must
+be in a permitted folder; saved projects can contain a single absolute folder path.
+Model output never executes itself. Approvals are reviewed in Activity. Read
+results remain local and are not added to cloud chat.
 
 ## Development
 
@@ -63,6 +75,9 @@ execution boundary. Read results remain local and are not added to cloud chat.
 
 See [SETUP.md](SETUP.md), [SECURITY.md](SECURITY.md), [TESTING.md](TESTING.md),
 [ARCHITECTURE.md](ARCHITECTURE.md), and [NEXT_STEPS.md](NEXT_STEPS.md).
+Read [PROJECT_HANDOFF.md](PROJECT_HANDOFF.md) first when continuing development.
+Private repository: https://github.com/roopawalamurtaza-droid/project-jarvis,
+branch `feature/handsfree-voice`. The handoff records actual transfer/build status.
 `uv.lock` pins the complete dependency graph. No real credentials, recordings,
 local databases, downloaded model files, or build output are committed.
 

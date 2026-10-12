@@ -221,6 +221,10 @@ class MainWindow(QMainWindow):
         self._last_task_id: str | None = None
         self._selected_memory: Any = None
         self._stopped = False
+        from .health import build_identity
+
+        self.build_info = build_identity()
+        self.health_result = {"backend": "Health check pending", "speech_model": "Not checked"}
         self.setWindowTitle("JARVIS · Personal workspace")
         self.setWindowIcon(_icon())
         self.resize(1180, 800)
@@ -238,8 +242,12 @@ class MainWindow(QMainWindow):
             "JARVIS",
             "Your workspace is ready. Choose a provider in Settings, then type a message. "
             "Desktop actions appear in Activity with their actual results. "
-            "Hold the microphone button to record only when you choose.",
+            "Enable hands-free listening in Settings, or hold the microphone button to talk.",
         )
+        from .voice_controller import VoiceController
+
+        self.voice_controller = VoiceController(self)
+        self._update_build_health()
         # Reads are asynchronous; initial paint does not wait for the database.
         QTimer.singleShot(0, self.refresh)
 
@@ -329,6 +337,9 @@ class MainWindow(QMainWindow):
         self.speak_check.setChecked(bool(self.settings.speech_enabled))
         self.speak_check.toggled.connect(self._speech_toggled)
         buttons.addWidget(self.speak_check)
+        self.listen_button = _button("Resume listening", lambda: self.voice_controller.toggle())
+        buttons.addWidget(self.listen_button)
+        buttons.addWidget(_button("Mute", lambda: self.voice_controller.mute()))
         buttons.addStretch()
         self.interrupt_button = _button("Interrupt", self.interrupt)
         self.interrupt_button.setObjectName("Interrupt")
@@ -337,6 +348,8 @@ class MainWindow(QMainWindow):
         self.send_button.setObjectName("Primary")
         buttons.addWidget(self.send_button)
         composer_layout.addLayout(buttons)
+        self.voice_status = _label("Voice: Idle · microphone off", "Muted", True)
+        composer_layout.addWidget(self.voice_status)
         layout.addWidget(panel)
         return page
 
@@ -367,7 +380,7 @@ class MainWindow(QMainWindow):
         self.tool_path.setPlaceholderText("Full path inside a permitted folder")
         action_row.addWidget(self.tool_path, 1)
         self.tool_app = QComboBox()
-        self.tool_app.addItems(["notepad", "calculator", "vscode"])
+        self.tool_app.addItems(["notepad", "calculator", "vscode", "chrome"])
         self.tool_app.hide()
         action_row.addWidget(self.tool_app, 1)
         self.action_button = _button("Submit action", self.submit_action, kind="Primary")
@@ -535,6 +548,13 @@ class MainWindow(QMainWindow):
         if self.settings.speech_voice:
             self.voice_choice.addItem(self.settings.speech_voice)
             self.voice_choice.setCurrentIndex(1)
+        self.speaker_choice = QComboBox()
+        self.speaker_choice.addItem("Windows default output", None)
+        if self.settings.speaker_device:
+            self.speaker_choice.addItem(
+                "Saved output device (refresh to inspect)", self.settings.speaker_device
+            )
+            self.speaker_choice.setCurrentIndex(1)
         self.speech_model_edit = QLineEdit(self.settings.speech_model)
         self.speech_device_choice = QComboBox()
         self.speech_device_choice.addItems(["cpu", "cuda"])
@@ -542,6 +562,60 @@ class MainWindow(QMainWindow):
         self.compute_choice = QComboBox()
         self.compute_choice.addItems(["int8", "float16", "float32", "int8_float16"])
         self.compute_choice.setCurrentText(self.settings.speech_compute_type)
+        self.wake_check = QCheckBox("Allow hands-free microphone listening on this PC")
+        self.wake_check.setChecked(self.settings.wake_enabled)
+        self.wake_phrase_edit = QLineEdit(self.settings.wake_phrase)
+        self.sensitivity_spin = QDoubleSpinBox()
+        self.sensitivity_spin.setDecimals(3)
+        self.sensitivity_spin.setRange(0.001, 0.2)
+        self.sensitivity_spin.setSingleStep(0.005)
+        self.sensitivity_spin.setValue(self.settings.input_sensitivity)
+        self.vad_spin = QSpinBox()
+        self.vad_spin.setRange(0, 3)
+        self.vad_spin.setValue(self.settings.vad_aggressiveness)
+        self.endpoint_spin = QDoubleSpinBox()
+        self.endpoint_spin.setRange(0.3, 3)
+        self.endpoint_spin.setValue(self.settings.speech_end_silence)
+        self.followup_spin = QDoubleSpinBox()
+        self.followup_spin.setRange(5, 120)
+        self.followup_spin.setValue(self.settings.conversation_timeout)
+        self.activation_spin = QDoubleSpinBox()
+        self.activation_spin.setRange(2, 60)
+        self.activation_spin.setValue(self.settings.speech_start_timeout)
+        self.utterance_spin = QDoubleSpinBox()
+        self.utterance_spin.setRange(3, 30)
+        self.utterance_spin.setValue(self.settings.maximum_utterance_seconds)
+        self.rate_spin = QDoubleSpinBox()
+        self.rate_spin.setRange(-1, 1)
+        self.rate_spin.setSingleStep(0.1)
+        self.rate_spin.setValue(self.settings.speech_rate)
+        self.greeting_choice = QComboBox()
+        self.greeting_choice.addItems(["brief", "friendly", "professional", "silent"])
+        self.greeting_choice.setCurrentText(self.settings.greeting_style)
+        self.timezone_edit = QLineEdit(self.settings.timezone)
+        self.pronunciation_edit = QPlainTextEdit(
+            json.dumps(self.settings.pronunciation_replacements, ensure_ascii=False)
+        )
+        self.pronunciation_edit.setMaximumHeight(70)
+        self.interruption_check = QCheckBox(
+            "Headset only: recognize stop commands during speech (experimental)"
+        )
+        self.interruption_check.setChecked(self.settings.voice_interruption)
+        self.proactive_check = QCheckBox("Speak about completed/failed local tasks")
+        self.proactive_check.setChecked(self.settings.proactive_enabled)
+        self.quiet_start_spin = QSpinBox()
+        self.quiet_start_spin.setRange(0, 23)
+        self.quiet_start_spin.setValue(self.settings.quiet_start)
+        self.quiet_end_spin = QSpinBox()
+        self.quiet_end_spin.setRange(0, 23)
+        self.quiet_end_spin.setValue(self.settings.quiet_end)
+        self.proactive_interval_spin = QDoubleSpinBox()
+        self.proactive_interval_spin.setRange(30, 86400)
+        self.proactive_interval_spin.setValue(self.settings.proactive_interval_seconds)
+        self.startup_check = QCheckBox("Start after my Windows login")
+        self.startup_check.setChecked(self.settings.start_with_windows)
+        self.tray_check = QCheckBox("Open minimized to the system tray")
+        self.tray_check.setChecked(self.settings.minimize_to_tray)
         fields = [
             ("AI provider", self.provider_choice),
             ("Model", self.model_edit),
@@ -559,9 +633,29 @@ class MainWindow(QMainWindow):
             ("Requests per session", self.requests_spin),
             ("Microphone", self.microphone_choice),
             ("Speaking voice", self.voice_choice),
+            ("Speaker", self.speaker_choice),
             ("Local speech model", self.speech_model_edit),
             ("Speech processing", self.speech_device_choice),
             ("Speech precision", self.compute_choice),
+            ("Hands-free permission", self.wake_check),
+            ("Wake phrase", self.wake_phrase_edit),
+            ("Minimum input level (RMS)", self.sensitivity_spin),
+            ("Noise rejection (0–3)", self.vad_spin),
+            ("Speech ending pause (seconds)", self.endpoint_spin),
+            ("Follow-up window (seconds)", self.followup_spin),
+            ("Activation wait (seconds)", self.activation_spin),
+            ("Maximum utterance (seconds)", self.utterance_spin),
+            ("Speaking speed (−1 to 1)", self.rate_spin),
+            ("Greeting style", self.greeting_choice),
+            ("Timezone", self.timezone_edit),
+            ("Pronunciations (JSON dictionary)", self.pronunciation_edit),
+            ("Voice interruption", self.interruption_check),
+            ("Proactive speech", self.proactive_check),
+            ("Quiet hours start (0–23)", self.quiet_start_spin),
+            ("Quiet hours end (0–23)", self.quiet_end_spin),
+            ("Notification interval (seconds)", self.proactive_interval_spin),
+            ("Windows startup", self.startup_check),
+            ("Background display", self.tray_check),
         ]
         for title, field in fields:
             form.addRow(title, field)
@@ -572,6 +666,16 @@ class MainWindow(QMainWindow):
                 "Advanced currently uses the same conservative policy. Folder creation always asks. "
                 "Speech models must be installed using the explicit setup command; the microphone button "
                 "never downloads one. CUDA requires compatible speech libraries.",
+                "Muted",
+                True,
+            )
+        )
+        layout.addWidget(
+            _label(
+                "Hands-free checks speech locally using offline Whisper; speech segments are discarded after recognition. "
+                "Saving this permission enables listening now and after restart. Pause or Mute closes the microphone. "
+                "During replies the microphone is gated to avoid speaker echo. Interrupt always stops playback. "
+                "Voice stop commands during playback require a headset and explicit opt-in; no acoustic echo canceller is installed.",
                 "Muted",
                 True,
             )
@@ -591,6 +695,12 @@ class MainWindow(QMainWindow):
         output_row.addWidget(_button("Windows sound settings", self.open_sound_settings))
         layout.addLayout(output_row)
         layout.addWidget(_label(f"Local data: {self.settings.data_dir}", "Muted", True))
+        self.build_health_label = _label("", "Muted", True)
+        self.build_health_label.setTextInteractionFlags(
+            Qt.TextInteractionFlag.TextSelectableByMouse
+        )
+        layout.addWidget(self.build_health_label)
+        layout.addWidget(_button("Run startup health check", self.run_health_check))
         layout.addStretch()
         scroll.setWidget(page)
         return scroll
@@ -603,6 +713,42 @@ class MainWindow(QMainWindow):
 
     def _status(self, text: str) -> None:
         self.status_label.setText(text)
+
+    def _update_build_health(self) -> None:
+        controller = getattr(self, "voice_controller", None)
+        voice = controller.session.state.value if controller else "IDLE"
+        error = controller.session.error if controller else None
+        startup_error = self.settings.data_dir / "startup-error.json"
+        if not error and startup_error.is_file():
+            try:
+                historical = json.loads(startup_error.read_text(encoding="utf-8"))
+                error = f"{historical.get('error', 'Unknown')} ({historical.get('time_utc', 'historical')})"
+            except (ValueError, OSError):
+                error = "Startup error record could not be read"
+        identity = self.build_info
+        speech = self._speech
+        engine = (
+            (speech.engine or speech.error)
+            if speech and hasattr(speech, "engine")
+            else "Not initialized; enable Speak replies or refresh devices"
+        )
+        self.build_health_label.setText(
+            f"Application {identity['version']} · Git {identity['git_commit'][:12]} · dirty={identity.get('dirty')}\n"
+            f"Built: {identity['build_date_utc']}\nExecutable: {identity['executable']}\n"
+            f"Voice engine: {engine}\nWake: {voice} · phrase: {self.settings.wake_phrase}\n"
+            f"Microphone: {self.voice_status.text()}\nBackend: {self.health_result['backend']}\n"
+            f"Speech model: {self.health_result['speech_model']}\nLast startup/voice error: {error or 'None reported'}"
+        )
+
+    def run_health_check(self) -> None:
+        from .health import startup_health
+
+        def checked(result):
+            self.health_result = result
+            self._update_build_health()
+            self._status("Startup health checked · see build and voice details in Settings")
+
+        self._run("health", lambda: startup_health(self.settings.model_copy(deep=True)), checked)
 
     def _transition_busy(self) -> bool:
         if any(name in self._jobs for name in ("settings", "history", "history-delete")):
@@ -669,16 +815,29 @@ class MainWindow(QMainWindow):
         if self._closing:
             self._poll_shutdown()
 
-    def send_message(self) -> None:
+    def send_message(self) -> bool:
         text = self.composer.toPlainText().strip()
         if not text or "chat" in self._jobs or self._closing:
-            return
+            return False
         if self._transition_busy():
-            return
+            return False
         if self._stopped:
             self._status("Emergency stop is active. Resume in Activity before sending.")
-            return
+            return False
         self.composer.clear()
+        controller = self.voice_controller
+        if controller.active:
+            from .conversation import VoiceState
+
+            if controller.session.state == VoiceState.ASSISTANT_SPEAKING:
+                if self._speech:
+                    self._speech.stop()
+                controller.session.response_finished()
+            if controller.session.state == VoiceState.WAKE_WORD_LISTENING:
+                controller.session.wake(text)
+            if controller.session.state != VoiceState.PROCESSING:
+                controller.gate()
+                controller.session.processing()
         self._append_message("YOU", text)
         self.send_button.setEnabled(False)
         self._status(f"Waiting for {self.settings.provider} · Interrupt cancels this request")
@@ -696,13 +855,13 @@ class MainWindow(QMainWindow):
             self._status(
                 f"Reply from {result.get('provider', self.settings.provider)} · {result.get('model', self.settings.model)}"
             )
-            if self.speak_check.isChecked() and answer:
-                self._speak(answer)
+            self.voice_controller.reply(answer)
             self.refresh()
 
         def failed(error: str) -> None:
             self._append_message("SYSTEM", error)
             self._status("Request failed · review the message above")
+            self.voice_controller.interrupted()
 
         self._run(
             "chat",
@@ -710,6 +869,7 @@ class MainWindow(QMainWindow):
             succeeded,
             failed,
         )
+        return True
 
     def new_conversation(self) -> None:
         if self._transition_busy():
@@ -731,6 +891,8 @@ class MainWindow(QMainWindow):
         self._record_release.set()
         if self._speech:
             self._speech.stop()
+        if hasattr(self, "voice_controller"):
+            self.voice_controller.interrupted()
         self._status("Interrupted · active requests stop at the next safe boundary")
 
     def _tool_changed(self) -> None:
@@ -763,6 +925,7 @@ class MainWindow(QMainWindow):
         self.task_detail.setPlainText(json.dumps(result, indent=2, ensure_ascii=False, default=str))
         self._status(f"Action {result.get('state', 'updated')} · review Activity for evidence")
         self.refresh()
+        self.voice_controller.task_event(result)
 
     def _selected_task(self) -> dict[str, Any] | None:
         row = self.task_table.currentRow()
@@ -803,6 +966,7 @@ class MainWindow(QMainWindow):
     def emergency_stop(self) -> None:
         self._stopped = True
         self.interrupt()
+        self.voice_controller.stop("mute")
         self._select_task()
         self._status("EMERGENCY STOP · cancelling pending actions and voice")
         stop = getattr(self.service, "emergency_stop", self.engine.emergency_stop)
@@ -1000,6 +1164,13 @@ class MainWindow(QMainWindow):
             self._status("Finish or interrupt active work before saving settings.")
             return
         values = self.settings.model_dump()
+        try:
+            pronunciations = json.loads(self.pronunciation_edit.toPlainText())
+        except ValueError:
+            self._status(
+                'Pronunciations must be a JSON dictionary, for example {"JARVIS": "Jarvis"}.'
+            )
+            return
         values.update(
             provider=self.provider_choice.currentText(),
             model=self.model_edit.text().strip(),
@@ -1023,6 +1194,26 @@ class MainWindow(QMainWindow):
             speech_voice=self.voice_choice.currentText()
             if self.voice_choice.currentIndex() > 0
             else None,
+            speaker_device=self.speaker_choice.currentData(),
+            wake_enabled=self.wake_check.isChecked(),
+            wake_phrase=self.wake_phrase_edit.text().strip(),
+            input_sensitivity=self.sensitivity_spin.value(),
+            vad_aggressiveness=self.vad_spin.value(),
+            speech_end_silence=self.endpoint_spin.value(),
+            conversation_timeout=self.followup_spin.value(),
+            speech_start_timeout=self.activation_spin.value(),
+            maximum_utterance_seconds=self.utterance_spin.value(),
+            speech_rate=self.rate_spin.value(),
+            greeting_style=self.greeting_choice.currentText(),
+            timezone=self.timezone_edit.text().strip(),
+            pronunciation_replacements=pronunciations,
+            voice_interruption=self.interruption_check.isChecked(),
+            proactive_enabled=self.proactive_check.isChecked(),
+            quiet_start=self.quiet_start_spin.value(),
+            quiet_end=self.quiet_end_spin.value(),
+            proactive_interval_seconds=self.proactive_interval_spin.value(),
+            start_with_windows=self.startup_check.isChecked(),
+            minimize_to_tray=self.tray_check.isChecked(),
         )
         try:
             candidate = Settings.model_validate(values)
@@ -1038,8 +1229,19 @@ class MainWindow(QMainWindow):
             "GEMINI_API_KEY": self.clear_gemini_key.isChecked(),
         }
         self.save_settings_button.setEnabled(False)
+        from .conversation import VoiceState
+
+        previous_voice_state = self.voice_controller.session.state
+        previous_wake = self.settings.wake_enabled
+        self.voice_controller.stop("disable")
+        save_voice_epoch = self.voice_controller.epoch
+        previous_startup = self.settings.start_with_windows
 
         def save() -> Settings:
+            if candidate.start_with_windows != previous_startup:
+                from .startup import set_start_with_windows
+
+                set_start_with_windows(candidate.start_with_windows, candidate.data_dir)
             secrets = getattr(self.service, "secret_store", None) or SecretStore(candidate.data_dir)
             for name, value in keys.items():
                 if remove[name]:
@@ -1060,8 +1262,30 @@ class MainWindow(QMainWindow):
             self.clear_openai_key.setChecked(False)
             self.clear_gemini_key.setChecked(False)
             self._voice = None
+            if self._speech:
+                self._speech.stop()
+                if getattr(self._speech, "_tts", None):
+                    self._speech._tts.deleteLater()
+                self._speech = None
             self._update_privacy_label()
             self._status("Settings saved · privacy and permission folders updated")
+            from .conversation import ProactivePolicy, VoiceSession
+
+            self.voice_controller.proactive = ProactivePolicy(self.settings)
+            if self.voice_controller.epoch == save_voice_epoch:
+                self.voice_controller.session = VoiceSession(self.settings)
+                if previous_wake == self.settings.wake_enabled and previous_voice_state in {
+                    VoiceState.MUTED,
+                    VoiceState.SLEEPING,
+                }:
+                    if previous_voice_state == VoiceState.MUTED:
+                        self.voice_controller.session.mute()
+                    else:
+                        self.voice_controller.session.enable()
+                        self.voice_controller.session.pause()
+                    self.voice_controller._display()
+                elif self.settings.wake_enabled:
+                    self.voice_controller.schedule_restart()
 
         def failed(error: str) -> None:
             # Do not retain pasted credentials in a disabled form after errors.
@@ -1075,7 +1299,22 @@ class MainWindow(QMainWindow):
         if self._speech is None:
             from .voice import SpeechOutput
 
-            self._speech = SpeechOutput(self)
+            self._speech = (
+                SpeechOutput(self, output_device=self.settings.speaker_device)
+                if self.settings.speaker_device
+                else SpeechOutput(self)
+            )
+            if hasattr(self._speech, "on_finished"):
+                self._speech.on_finished(self.voice_controller.speech_finished)
+            engine = getattr(self._speech, "_tts", None)
+            if engine is not None:
+                engine.stateChanged.connect(
+                    lambda state: (
+                        self.voice_controller.playback_started()
+                        if getattr(state, "name", "") == "Speaking"
+                        else None
+                    )
+                )
         if not getattr(self._speech, "available", True):
             raise RuntimeError(
                 getattr(self._speech, "error", None) or "Speech output is unavailable."
@@ -1101,13 +1340,21 @@ class MainWindow(QMainWindow):
             self._speech.stop()
 
     def _speak(self, text: str) -> None:
+        self.voice_controller._speech_requested_at = time.monotonic()
         try:
             speech = self._ensure_speech()
             if self.voice_choice.currentIndex() > 0:
                 speech.set_voice(self.voice_choice.currentText())
-            speech.speak(text)
+            if hasattr(speech, "set_rate"):
+                speech.set_rate(self.settings.speech_rate)
+                speech.speak(text, replacements=self.settings.pronunciation_replacements)
+            else:
+                speech.speak(text)
+            if not getattr(speech, "speaking", True):
+                self.voice_controller.speech_finished()
         except Exception as exc:
             self._status(f"Reply received. Speech unavailable: {exc}")
+            self.voice_controller.speech_finished()
 
     def refresh_audio_devices(self) -> None:
         if self._transition_busy():
@@ -1115,7 +1362,24 @@ class MainWindow(QMainWindow):
         if "record" in self._jobs:
             self._status("Finish recording and transcription before refreshing devices.")
             return
+        if self.voice_controller.active:
+            self._status("Pause hands-free listening before refreshing audio devices.")
+            return
         try:
+            from .voice import SpeechOutput
+
+            if hasattr(SpeechOutput, "output_devices"):
+                outputs = SpeechOutput.output_devices()
+                current_output = self.speaker_choice.currentData()
+                self.speaker_choice.clear()
+                self.speaker_choice.addItem("Windows default output", None)
+                for output in outputs:
+                    self.speaker_choice.addItem(output["name"], output["id"])
+                index = self.speaker_choice.findData(current_output)
+                if current_output and index < 0:
+                    self.speaker_choice.addItem("Saved output device disconnected", current_output)
+                    index = self.speaker_choice.count() - 1
+                self.speaker_choice.setCurrentIndex(max(0, index))
             voices = self._ensure_speech().voices()
             current_voice = self.voice_choice.currentText()
             self.voice_choice.clear()
@@ -1147,6 +1411,10 @@ class MainWindow(QMainWindow):
 
     def start_recording(self) -> None:
         if self._transition_busy():
+            return
+        if self.voice_controller.active:
+            self.voice_controller.stop()
+            self._status("Hands-free paused. Hold to talk once its microphone closes.")
             return
         if (
             any(name in self._jobs for name in ("record", "chat", "audio-devices"))
@@ -1268,6 +1536,13 @@ class MainWindow(QMainWindow):
         for title, callback in (
             ("Show JARVIS", self.show_from_tray),
             ("Compact assistant", self.toggle_compact),
+            ("Pause listening", lambda: self.voice_controller.stop()),
+            ("Resume listening", lambda: self.voice_controller.start()),
+            ("Mute voice and microphone", lambda: self.voice_controller.mute()),
+            (
+                "View voice status",
+                lambda: (self.show_from_tray(), self._status(self.voice_status.text())),
+            ),
             ("Emergency stop", self.emergency_stop),
             ("Quit", self.close),
         ):
@@ -1303,6 +1578,7 @@ class MainWindow(QMainWindow):
         if self._closing:
             return
         self.interrupt()
+        self.voice_controller.stop("disable")
         self._stopped = True
         stop = getattr(self.service, "emergency_stop", self.engine.emergency_stop)
         self._run("shutdown-stop", stop)
@@ -1339,4 +1615,7 @@ def run_desktop(service: Any, settings: Settings, store: Any, engine: Any) -> in
     app.setOrganizationName("Project JARVIS")
     window = MainWindow(service, settings, store, engine)
     window.show()
+    QTimer.singleShot(0, window.run_health_check)
+    if settings.minimize_to_tray and window.tray:
+        QTimer.singleShot(0, window.hide)
     return app.exec()

@@ -7,8 +7,10 @@ on a worker thread; Qt speech output belongs on its owning GUI thread.
 from __future__ import annotations
 
 import importlib
+import math
 import sys
 import threading
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -328,6 +330,11 @@ class VoiceInput:
         self._model, self._model_key = model, key
         return model
 
+    def prepare(self) -> None:
+        """Prime the configured offline model when listening is explicitly enabled."""
+        with self._transcribe_lock:
+            self._load_model()
+
     def transcribe(self, audio: np.ndarray) -> str:
         """Transcribe a bounded normalized mono float array using only local files."""
         np = self._numpy()
@@ -365,11 +372,14 @@ class VoiceInput:
 class SpeechOutput:
     """Speak through an installed Windows Qt engine, only after an explicit call."""
 
-    def __init__(self, parent: Any = None):
+    def __init__(self, parent: Any = None, output_device: str | None = None):
         self._tts: Any = None
         self._qt: Any = None
         self._core: Any = None
         self._error: str | None = None
+        self._active = False
+        self._state_started = False
+        self._finished_callbacks: list[Callable[[], None]] = []
         self.engine = ""
         try:
             self._core = importlib.import_module("PySide6.QtCore")
@@ -378,11 +388,32 @@ class SpeechOutput:
                 raise VoiceError("Speech output requires a running desktop application.")
             if sys.platform != "win32":
                 raise VoiceError("The MVP speech output supports installed Windows voices.")
+            selected_output = None
+            if output_device is not None:
+                if not isinstance(output_device, str) or not output_device:
+                    raise VoiceError("Select a valid speaker device or Windows default.")
+                multimedia = importlib.import_module("PySide6.QtMultimedia")
+                for device in multimedia.QMediaDevices.audioOutputs():
+                    if bytes(device.id()).hex() == output_device:
+                        selected_output = device
+                        break
+                if selected_output is None:
+                    raise VoiceError(
+                        "The selected speaker is disconnected or unavailable. "
+                        "Refresh devices and select a speaker or Windows default."
+                    )
             engines = self._qt.QTextToSpeech.availableEngines()
             for name in ("winrt", "sapi"):
                 if name not in engines:
                     continue
-                candidate = self._qt.QTextToSpeech(name, parent)
+                if selected_output is not None:
+                    if name != "winrt":
+                        continue  # SAPI does not accept an audioDevice parameter.
+                    candidate = self._qt.QTextToSpeech(
+                        name, {"audioDevice": selected_output}, parent
+                    )
+                else:
+                    candidate = self._qt.QTextToSpeech(name, parent)
                 if candidate.state() == self._qt.QTextToSpeech.State.Error:
                     self._error = candidate.errorString() or "Windows speech initialization failed."
                     candidate.deleteLater()
@@ -391,14 +422,72 @@ class SpeechOutput:
                 self.engine = name
                 self._error = None
                 candidate.errorOccurred.connect(self._on_error)
+                candidate.stateChanged.connect(self._on_state)
                 break
             if self._tts is None:
+                if selected_output is not None:
+                    raise VoiceError(
+                        self._error
+                        or "Speaker selection requires the Windows WinRT engine. "
+                        "Select Windows default to use the SAPI fallback."
+                    )
                 raise VoiceError(self._error or "No supported Windows speech engine is installed.")
         except Exception as exc:
             self._error = f"Speech output is unavailable: {exc}"
 
+    @staticmethod
+    def output_devices() -> list[dict[str, str]]:
+        """List connected output devices without speaking or opening capture."""
+        try:
+            multimedia = importlib.import_module("PySide6.QtMultimedia")
+            return [
+                {"id": bytes(device.id()).hex(), "name": str(device.description())}
+                for device in multimedia.QMediaDevices.audioOutputs()
+            ]
+        except (ImportError, OSError, RuntimeError) as exc:
+            raise VoiceError("Could not list speakers. Check Windows sound settings.") from exc
+
     def _on_error(self, reason: Any, message: str) -> None:
         self._error = message or "Windows speech output failed."
+        self._finish()
+
+    def _on_state(self, state: Any) -> None:
+        if state == self._qt.QTextToSpeech.State.Speaking:
+            self._state_started = True
+        elif state == self._qt.QTextToSpeech.State.Ready and self._state_started:
+            self._finish()
+        elif state == self._qt.QTextToSpeech.State.Error:
+            self._finish()
+
+    def _finish(self) -> None:
+        if not self._active:
+            return
+        self._active = False
+        self._state_started = False
+        for callback in tuple(self._finished_callbacks):
+            callback()
+
+    @property
+    def speaking(self) -> bool:
+        """Whether one accepted utterance is still active, including engine startup."""
+        return self._active
+
+    def on_finished(self, callback: Callable[[], None]) -> Callable[[], None]:
+        """Subscribe to completion/stop/error exactly once per accepted utterance.
+
+        Callbacks run on the owning desktop thread and receive no arguments.
+        The returned function removes the subscription. Empty machine-only text
+        does not start an utterance: speak returns False for that case.
+        """
+        if not callable(callback):
+            raise TypeError("Speech completion callback must be callable.")
+        self._finished_callbacks.append(callback)
+
+        def unsubscribe() -> None:
+            if callback in self._finished_callbacks:
+                self._finished_callbacks.remove(callback)
+
+        return unsubscribe
 
     @property
     def error(self) -> str | None:
@@ -433,17 +522,49 @@ class SpeechOutput:
                 return
         raise VoiceError("That Windows voice is unavailable. Select an installed voice.")
 
-    def speak(self, text: str) -> None:
+    def set_rate(self, rate: float) -> None:
+        """Set the installed voice's relative speech rate between -1 and 1."""
+        self._require_engine()
+        if isinstance(rate, bool) or not isinstance(rate, (int, float)):
+            raise VoiceError("Speech rate must be a number between -1 and 1.")
+        if not math.isfinite(rate) or not -1 <= rate <= 1:
+            raise VoiceError("Speech rate must be a number between -1 and 1.")
+        self._tts.setRate(float(rate))
+
+    def speak(self, text: str, *, replacements: Mapping[str, str] | None = None) -> bool:
+        """Normalize a written reply and replace ongoing speech with one utterance.
+
+        Returns False when the response contains only code/logs/JSON. The written
+        reply remains unchanged; terminal sentence punctuation is preserved.
+        """
         self._require_engine()
         if not isinstance(text, str):
             raise VoiceError("Speech output requires text.")
         if not text.strip():
-            return
+            return False
         if len(text) > 12_000:
             raise VoiceError("The response is too long to speak. Read it in the chat instead.")
-        self._tts.say(text)
-        if self._tts.state() == self._qt.QTextToSpeech.State.Error:
-            raise VoiceError(self.error or "Windows speech output failed.")
+        from .speech_text import normalize_speech
+
+        spoken = normalize_speech(text, replacements)
+        if not spoken:
+            return False
+        if len(spoken) > 12_000:
+            raise VoiceError("The response is too long to speak. Read it in the chat instead.")
+        if self._active:
+            self.stop()
+        self._active = True
+        self._state_started = False
+        try:
+            self._tts.say(spoken)
+            if self._tts.state() == self._qt.QTextToSpeech.State.Error:
+                raise VoiceError(self.error or "Windows speech output failed.")
+        except Exception as exc:
+            self._finish()
+            if isinstance(exc, VoiceError):
+                raise
+            raise VoiceError("Windows speech output failed.") from exc
+        return True
 
     def stop(self) -> None:
         if self._tts is None:
@@ -451,3 +572,4 @@ class SpeechOutput:
         if self._core.QThread.currentThread() != self._tts.thread():
             raise VoiceError("Speech output must be stopped from its desktop thread.")
         self._tts.stop(self._qt.QTextToSpeech.BoundaryHint.Immediate)
+        self._finish()

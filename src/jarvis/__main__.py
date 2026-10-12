@@ -7,6 +7,7 @@ import json
 import logging
 import secrets
 import sys
+from datetime import datetime, timezone
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
@@ -43,6 +44,10 @@ def doctor(settings):
             for name in ["PySide6", "fastapi", "sounddevice", "faster_whisper"]
         },
     }
+    from jarvis.health import build_identity, startup_health
+
+    report["build"] = build_identity()
+    report["health"] = startup_health(settings)
     try:
         from jarvis.voice import VoiceInput
 
@@ -81,6 +86,16 @@ def main(argv=None):
     )
     parser.add_argument("--chat", help="Send one real model message and print the actual result")
     parser.add_argument(
+        "--verify-voice-update",
+        action="store_true",
+        help="Explicit synthetic voice desktop verification, local AI and speech playback; no microphone",
+    )
+    parser.add_argument(
+        "--verification-actions",
+        action="store_true",
+        help="Also verify authorized Chrome and VS Code launch during the voice diagnostic",
+    )
+    parser.add_argument(
         "--smoke-test",
         action="store_true",
         help="Verify desktop/audio modules without recording or model calls",
@@ -105,6 +120,25 @@ def main(argv=None):
             print(f"Offline speech model ready: {download_speech_model(settings)}")
             return 0
         configure_logging(settings.data_dir)
+        if args.verify_voice_update:
+            import runpy
+
+            diagnostic_dir = (
+                Path(__file__).parent
+                if getattr(sys, "frozen", False)
+                else Path(__file__).resolve().parents[2] / "scripts"
+            )
+            previous_args = sys.argv
+            sys.argv = ["verify_voice_desktop", "--data-dir", str(settings.data_dir)]
+            if args.verification_actions:
+                sys.argv.append("--actions")
+            sys.path.insert(0, str(diagnostic_dir))
+            try:
+                runpy.run_path(str(diagnostic_dir / "verify_voice_desktop.py"), run_name="__main__")
+            finally:
+                sys.argv = previous_args
+                sys.path.remove(str(diagnostic_dir))
+            return 0
         service = build_service(settings)
         try:
             if args.smoke_test:
@@ -142,6 +176,16 @@ def main(argv=None):
         # Provider errors are redacted by adapters. Startup failures may include local
         # filesystem paths, so logs persist only the exception class.
         logging.getLogger("jarvis").error("Startup/request failed (%s)", type(exc).__name__)
+        if "settings" in locals():
+            (settings.data_dir / "startup-error.json").write_text(
+                json.dumps(
+                    {
+                        "error": type(exc).__name__,
+                        "time_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+                    }
+                ),
+                encoding="utf-8",
+            )
         if args.smoke_test and "settings" in locals():
             (settings.data_dir / "package-verification.json").write_text(
                 json.dumps({"error": type(exc).__name__, "detail": str(exc)}), encoding="utf-8"

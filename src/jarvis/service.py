@@ -6,6 +6,8 @@ import json
 import threading
 import uuid
 from dataclasses import dataclass, field
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from .providers import (
     CancelSignal,
@@ -15,6 +17,7 @@ from .providers import (
     TextProvider,
     create_provider,
 )
+from .short_commands import local_command
 
 MAX_MESSAGE_CHARS = 12000
 MAX_CONTEXT_CHARS = 24000
@@ -23,7 +26,8 @@ MAX_SESSIONS = 128
 MAX_MEMORY_REFERENCE_CHARS = 4096
 
 SYSTEM_MESSAGE = (
-    "You are JARVIS, a helpful desktop assistant. Be clear about uncertainty. "
+    "You are JARVIS, a calm, attentive desktop assistant. Be concise, natural, polite, "
+    "and professional. Use 'sir' sparingly. Be clear about uncertainty. "
     "You cannot execute programs, change files, or save memories yourself. "
     "Describe suggested actions as proposals; never claim an action completed. "
     "Actual local actions require explicit /tool commands and the permission engine. "
@@ -89,6 +93,28 @@ class JarvisService:
             return self._tool_command(message, session_id, signal)
         if message == "/remember" or message.startswith("/remember "):
             return self._remember_command(message, session_id, signal)
+        command = local_command(message, self.settings, self.store)
+        if isinstance(command, tuple):
+            tool, arguments = command
+            result = self._tool_command(f"/tool {tool} {json.dumps(arguments)}", session_id, signal)
+            task = result["task"]
+            if task["state"] == "completed":
+                result["text"] = (
+                    "Certainly. The launch request was accepted."
+                    if tool in {"open_app", "open_folder"}
+                    else "The action is complete."
+                )
+            elif task["state"] == "awaiting_approval":
+                result["text"] = "This action needs your approval. Review Activity."
+            return result
+        if isinstance(command, str):
+            return {
+                "text": command,
+                "session_id": session_id,
+                "provider": "local",
+                "model": "",
+                "usage": {},
+            }
         with self._lock:
             if session_id not in self._sessions:
                 if len(self._sessions) >= MAX_SESSIONS:
@@ -134,7 +160,18 @@ class JarvisService:
             memory_reference = self._memory_reference() if provider_name == "ollama" else []
             try:
                 reply = provider.generate(
-                    [{"role": "system", "content": SYSTEM_MESSAGE}, *memory_reference, *messages],
+                    [
+                        {
+                            "role": "system",
+                            "content": SYSTEM_MESSAGE
+                            + " Current local time: "
+                            + datetime.now(ZoneInfo(self.settings.timezone)).isoformat(
+                                timespec="minutes"
+                            ),
+                        },
+                        *memory_reference,
+                        *messages,
+                    ],
                     model=model,
                     timeout=self.settings.request_timeout,
                     max_output_tokens=self.settings.max_output_tokens,

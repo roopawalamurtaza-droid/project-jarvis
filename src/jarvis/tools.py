@@ -20,7 +20,7 @@ class PathArgs(BaseModel):
 
 class AppArgs(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
-    app: Literal["notepad", "calculator", "vscode"]
+    app: Literal["notepad", "calculator", "vscode", "chrome"]
 
 
 SCHEMAS = {
@@ -157,6 +157,12 @@ class ToolRegistry:
         candidates = {
             "notepad": [system / "notepad.exe"],
             "calculator": [system / "calc.exe"],
+            "chrome": [
+                Path(os.environ.get("ProgramFiles", "")) / "Google/Chrome/Application/chrome.exe",
+                Path(os.environ.get("ProgramFiles(x86)", ""))
+                / "Google/Chrome/Application/chrome.exe",
+                Path(os.environ.get("LOCALAPPDATA", "")) / "Google/Chrome/Application/chrome.exe",
+            ],
             "vscode": [
                 Path(os.environ.get("LOCALAPPDATA", "")) / "Programs/Microsoft VS Code/Code.exe",
                 Path(os.environ.get("ProgramFiles", "")) / "Microsoft VS Code/Code.exe",

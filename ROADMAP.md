@@ -12,7 +12,12 @@
 | 7 | Remote operation | Explicit authorization/cost review; authenticated encrypted transport; no exposed desktop API |
 | 8 | Release | Signed distribution/update process, fresh-machine tests, performance and accessibility review |
 
-Phase 1 development is the current milestone. Later phases are unimplemented.
+Phase 2 hands-free voice is now implemented in the existing application. The
+current milestone is packaging/update verification and developer handoff.
+Dedicated keyword detection, human acoustic accuracy acceptance, desktop context,
+durable scheduling, coding workflows and all later runtime/business features
+remain incomplete. The original Phase 2 desktop-context row above is a later
+milestone, distinct from the user's completed Phase 2 voice implementation.
 Full phase acceptance is recorded in TESTING.md rather than inferred from source
 code or interface mockups. The first version uses explicit tools, not autonomous
 model action planning. Cloud credentials, monetary budgets, streaming and broader

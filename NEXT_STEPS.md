@@ -1,61 +1,28 @@
-# Current milestone
+# Current engineering state — 13 October 2026
 
-Phase 1: Windows JARVIS development build. Source/service/local-model/voice checks
-work. The remaining gates are native human interaction, fresh-machine packaging
-and optional cloud-provider credential verification.
+Start with PROJECT_HANDOFF.md and UPDATE_REPAIR.md. Continue this checkout.
 
-## Completed functionality
+- Milestone: Phase 2 hands-free source implemented; update repair and handoff verification.
+- Branch: feature/handsfree-voice; main preserves Phase 1 b3f3c37.
+- Private remote: https://github.com/roopawalamurtaza-droid/project-jarvis.git.
+- Source full suite before final export/health tests: 280 passed in 41.81s.
+- Final suite/build/push/export record will be appended below after actual verification.
+- Local source synthetic voice demo: automatic time + real qwen3:8b follow-up,
+  Chrome and VS Code launch tasks completed, standalone wake/greeting, compound
+  sleep and mute. No Hold button. No human spoken room accuracy claim.
+- Existing launcher still selected the earlier Phase 1 executable at repair audit;
+  no JARVIS process/shortcut was found in checked locations. Rebuild is necessary.
+- Live settings/memory/keys/models stay in .local and are excluded from transfer.
 
-- Native PySide6 assistant/activity/memory/audit/settings UI, workers, tray and compact mode.
-- Real Ollama conversation; configurable OpenAI Responses/Gemini adapters with consent gates.
-- Offline push-to-talk transcription; Windows voices and immediate playback stop.
-- Explicit local memory and opt-in conversation persistence, complete export and retention.
-- Five strict local tools; approval policy, expiry/replay defense, audit and emergency stop.
-- DPAPI credentials; authenticated optional loopback API; reproducible uv.lock environment.
-- Source documentation, setup/start/package scripts and real execution checks.
+Priority next actions: finish frozen smoke/voice diagnostic and artifact identity;
+commit/push verified changes; export source+all Git history with hashes; then human
+microphone/accent/noise/echo testing and fresh Windows packaging acceptance.
 
-## Tests performed
+Unimplemented: dedicated keyword engine, durable reminders/calendar, screen vision,
+arbitrary coding tools, autonomous planning, full-duplex echo cancellation, signed
+installer/updater, broader business/runtime/remote workflows. Live cloud/CUDA are
+untested. Literal full-stop incident remains unreproduced; raw Markdown speech was
+reproduced and normalized. Do not enable passive capture without explicit opt-in.
 
-- Full suite passed before final review additions: 123 tests in 11.13 seconds.
-- Independent final security regressions: 5 tests passed, including actual junctions
-  and complete export with 201 messages/501 memories/501 tasks.
-- Final desktop regressions: 13 passed, including settings/history mutual exclusion.
-- Real local model, restarted memory recall, actual mic capture, offline generated
-  speech transcription, installed Windows voice playback and readable UI screenshot.
-- Dependency audit: no known vulnerabilities after updating the test framework.
-- Final combined suite: **127 passed in 31.87 seconds**. Ruff lint/format checks pass.
-- Clean packaged executable: exit 0; real Qt window screenshot saved; nine microphone
-  device entries detected; winrt speech engine and three Windows voices available.
-- Packaged executable's real Ollama chat also exited 0 after receiving/parsing a
-  local model response. The windowed CLI does not display stdout, so source/UI
-  checks retain the actual response text evidence.
-- The build script sanitizes its library search path so unrelated Poppler ICU
-  libraries cannot replace Windows' ICU. Models remain separate from the package.
-
-## Remaining work and limits
-
-- Complete the human checks in TESTING.md; packaged speech/model behavior on a fresh machine.
-- Live OpenAI/Gemini checks require securely configured credentials and explicit cloud consent.
-- Model-generated plans do not call tools: user actions are exact commands/forms for this build.
-- Response streaming, dollar budgets, accessibility-driven window verification, screenshots,
-  browser/developer-command tools and schedules are not implemented.
-- Advanced mode keeps balanced protections until scoped grants are implemented.
-- Native Whisper cannot be safely force-killed; shutdown waits or returns control.
-- Private GitHub repository has not been created. The directive requires user permission
-  before creating it; the local repository is ready for a future approved remote.
-
-## Resume commands
-
-```powershell
-cd C:\Jarvis
-.\scripts\start.ps1 -DataDir 'C:\Jarvis\.local'
-.\.venv\Scripts\python.exe -m pytest -q --tb=short
-.\.venv\Scripts\python.exe -m ruff check src tests scripts
-.\.venv\Scripts\python.exe scripts\verify_desktop.py --data-dir 'C:\Jarvis\.local' --live
-.\scripts\package.ps1
-```
-
-Next implementation milestone: provider-neutral structured action proposals with
-human-reviewed arguments, accessibility-backed app/window verification, bounded
-streaming and explicit budget policies. Preserve the existing execution/privacy
-boundary and add meaningful tests before expanding permissions.
+Exact install/run/build/test/restore commands are in PROJECT_HANDOFF.md. The frozen
+app must show its actual version/commit/date/path in Settings before acceptance.

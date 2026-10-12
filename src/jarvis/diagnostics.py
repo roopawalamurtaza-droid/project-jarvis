@@ -10,15 +10,21 @@ from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QApplication
 
 from jarvis.desktop import MainWindow
+from jarvis.health import build_identity, startup_health
 from jarvis.voice import SpeechOutput, VoiceInput
 
 
 def smoke_test(service, settings):
     app = QApplication.instance() or QApplication([])
-    window = MainWindow(service, settings, service.store, service.engine)
+    # A health/smoke check never consumes passive microphone permission.
+    safe_settings = settings.model_copy(deep=True)
+    safe_settings.wake_enabled = False
+    window = MainWindow(service, safe_settings, service.store, service.engine)
     window.show()
     started = time.perf_counter()
     result = {"frozen": bool(getattr(sys, "frozen", False)), "desktop": "launched"}
+    result["build"] = build_identity()
+    result["health"] = startup_health(settings)
     try:
         result["microphones"] = VoiceInput(settings).devices()
     except Exception as exc:

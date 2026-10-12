@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 from typing import Literal
 from urllib.parse import urlsplit
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -34,11 +35,60 @@ class Settings(BaseModel):
     max_requests_per_session: int = Field(default=30, ge=1, le=1000)
     speech_enabled: bool = False
     speech_voice: str | None = None
+    speaker_device: str | None = Field(default=None, max_length=512)
     microphone_device: int | None = None
     speech_model: str = "base.en"
     speech_device: Literal["cpu", "cuda"] = "cpu"
     speech_compute_type: str = "int8"
+    wake_enabled: bool = False
+    wake_phrase: str = Field(default="hey jarvis", min_length=3, max_length=60)
+    input_sensitivity: float = Field(default=0.015, ge=0.001, le=0.2)
+    vad_aggressiveness: int = Field(default=2, ge=0, le=3)
+    speech_end_silence: float = Field(default=1.0, ge=0.3, le=3)
+    speech_start_timeout: float = Field(default=8, ge=2, le=60)
+    conversation_timeout: float = Field(default=20, ge=5, le=120)
+    maximum_utterance_seconds: float = Field(default=25, ge=3, le=30)
+    speech_rate: float = Field(default=0, ge=-1, le=1)
+    pronunciation_replacements: dict[str, str] = Field(default_factory=dict)
+    greeting_style: Literal["brief", "friendly", "professional", "silent"] = "brief"
+    timezone: str = "Asia/Calcutta"
+    voice_interruption: bool = False
+    proactive_enabled: bool = False
+    quiet_start: int = Field(default=22, ge=0, le=23)
+    quiet_end: int = Field(default=8, ge=0, le=23)
+    proactive_interval_seconds: float = Field(default=300, ge=30, le=86400)
+    start_with_windows: bool = False
+    minimize_to_tray: bool = False
     history_retention_days: int = Field(default=30, ge=1, le=3650)
+
+    @field_validator("timezone")
+    @classmethod
+    def valid_timezone(cls, value: str) -> str:
+        try:
+            ZoneInfo(value)
+        except (ZoneInfoNotFoundError, ValueError):
+            raise ValueError("Choose a valid IANA timezone, such as Asia/Calcutta") from None
+        return value
+
+    @field_validator("wake_phrase")
+    @classmethod
+    def valid_wake_phrase(cls, value: str) -> str:
+        value = " ".join(value.lower().split())
+        if not any(char.isalpha() for char in value) or not all(
+            char.isalpha() or char in " '-" for char in value
+        ):
+            raise ValueError("Wake phrase must contain spoken words")
+        return value
+
+    @field_validator("pronunciation_replacements")
+    @classmethod
+    def bounded_pronunciations(cls, value: dict[str, str]) -> dict[str, str]:
+        if len(value) > 100 or any(
+            not key.strip() or len(key) > 80 or not text.strip() or len(text) > 160
+            for key, text in value.items()
+        ):
+            raise ValueError("Use up to 100 short pronunciation replacements")
+        return value
 
     @field_validator("data_dir", "allowed_roots", mode="after")
     @classmethod

@@ -314,6 +314,16 @@ def test_transcription_loads_only_local_files_and_reuses_model(settings, whisper
     assert options["vad_filter"] is True
 
 
+def test_explicit_prepare_primes_only_local_model_without_capture(settings, whisper_backend):
+    _, _, calls = whisper_backend
+    source = voice.VoiceInput(settings)
+    source.prepare()
+    source.prepare()
+    assert len(calls["models"]) == 1
+    assert calls["downloads"][0][1]["local_files_only"] is True
+    assert not calls["transcriptions"] and not source.recording
+
+
 def test_missing_tokenizer_prevents_whisper_network_fallback(settings, whisper_backend):
     model_path, _, calls = whisper_backend
     (model_path / "tokenizer.json").unlink()
@@ -369,6 +379,9 @@ class FakeSignal:
     def connect(self, callback):
         self.callback = callback
 
+    def emit(self, *args):
+        self.callback(*args)
+
 
 @pytest.fixture
 def qt_speech(monkeypatch):
@@ -387,10 +400,12 @@ def qt_speech(monkeypatch):
         def availableEngines():
             return engines
 
-        def __init__(self, name, parent=None):
+        def __init__(self, name, params=None, parent=None):
             self.name = name
+            self.params = params
             self._state = engine_states.Error if name in failed_engines else engine_states.Ready
             self.errorOccurred = FakeSignal()
+            self.stateChanged = FakeSignal()
             self.spoken = []
             self.stopped = []
             self.selected = None
@@ -414,9 +429,16 @@ def qt_speech(monkeypatch):
 
         def say(self, text):
             self.spoken.append(text)
+            self._state = engine_states.Speaking
+            self.stateChanged.emit(self._state)
 
         def stop(self, boundary):
             self.stopped.append(boundary)
+            self._state = engine_states.Ready
+            self.stateChanged.emit(self._state)
+
+        def setRate(self, rate):
+            self.rate = rate
 
         def deleteLater(self):
             pass
@@ -427,6 +449,13 @@ def qt_speech(monkeypatch):
             QThread=SimpleNamespace(currentThread=lambda: current_thread[0]),
         ),
         "PySide6.QtTextToSpeech": SimpleNamespace(QTextToSpeech=TextToSpeech),
+        "PySide6.QtMultimedia": SimpleNamespace(
+            QMediaDevices=SimpleNamespace(
+                audioOutputs=lambda: [
+                    SimpleNamespace(id=lambda: b"headphones", description=lambda: "Test headphones")
+                ]
+            )
+        ),
     }
     real_import = voice.importlib.import_module
     monkeypatch.setattr(
@@ -448,7 +477,7 @@ def test_windows_speech_is_available_but_silent_on_construction(qt_speech):
     assert created[0].selected is created[0].voice_objects[0]
     speech.speak("Hello")
     speech.stop()
-    assert created[0].spoken == ["Hello"]
+    assert created[0].spoken == ["Hello."]
     assert created[0].stopped == ["immediate"]
 
 
@@ -489,3 +518,92 @@ def test_speech_rejects_wrong_thread_or_missing_voice(qt_speech):
         speech.speak("Hello")
     with pytest.raises(voice.VoiceError, match="desktop thread"):
         speech.stop()
+
+
+def test_speech_completion_stop_and_error_are_exactly_once(qt_speech):
+    created, _, _, _, state = qt_speech
+    speech = voice.SpeechOutput()
+    completed = []
+    unsubscribe = speech.on_finished(lambda: completed.append("finished"))
+    assert speech.speak("Ready.") is True and speech.speaking
+    created[0]._state = state.Ready
+    created[0].stateChanged.emit(state.Ready)
+    created[0].stateChanged.emit(state.Ready)
+    assert completed == ["finished"] and not speech.speaking
+    speech.speak("Ready.")
+    speech.stop()
+    speech.stop()
+    assert completed == ["finished", "finished"] and not speech.speaking
+    speech.speak("Ready.")
+    created[0].errorOccurred.emit(None, "playback error")
+    created[0].stateChanged.emit(state.Error)
+    assert completed == ["finished"] * 3
+    unsubscribe()
+    created[0]._state = state.Ready
+    speech._error = None
+    speech.speak("Ready.")
+    speech.stop()
+    assert completed == ["finished"] * 3
+
+
+def test_speech_replaces_active_utterance_and_normalizes_only_speech(qt_speech):
+    created, *_ = qt_speech
+    speech = voice.SpeechOutput()
+    finished = []
+    speech.on_finished(lambda: finished.append(True))
+    speech.speak("First reply.")
+    written = "**JARVIS ready.**\n- Ask for help!"
+    speech.speak(written, replacements={"JARVIS": "Jarvis"})
+    assert written == "**JARVIS ready.**\n- Ask for help!"
+    assert created[0].spoken == ["First reply.", "Jarvis ready. Ask for help!"]
+    assert created[0].stopped == ["immediate"]
+    assert finished == [True] and speech.speaking
+
+
+def test_speech_suppresses_machine_output_without_playback(qt_speech):
+    created, *_ = qt_speech
+    speech = voice.SpeechOutput()
+    finished = []
+    speech.on_finished(lambda: finished.append(True))
+    assert speech.speak('{"task": "completed"}') is False
+    assert speech.speak("```python\nprint('Hello')\n```") is False
+    assert not speech.speaking and not created[0].spoken and not finished
+
+
+@pytest.mark.parametrize("rate", [-1.1, 1.1, True, float("nan"), float("inf"), "fast"])
+def test_speech_rejects_invalid_rate(qt_speech, rate):
+    with pytest.raises(voice.VoiceError, match="rate"):
+        voice.SpeechOutput().set_rate(rate)
+
+
+def test_speech_rate_is_applied(qt_speech):
+    created, *_ = qt_speech
+    speech = voice.SpeechOutput()
+    speech.set_rate(0.2)
+    assert created[0].rate == 0.2
+
+
+def test_speaker_enumeration_and_winrt_constructor_device_selection(qt_speech):
+    created, *_ = qt_speech
+    speakers = voice.SpeechOutput.output_devices()
+    assert speakers == [{"id": b"headphones".hex(), "name": "Test headphones"}]
+    assert not created
+    speech = voice.SpeechOutput(output_device=speakers[0]["id"])
+    assert speech.available and speech.engine == "winrt"
+    assert bytes(created[0].params["audioDevice"].id()) == b"headphones"
+    assert not created[0].spoken
+
+
+def test_disconnected_speaker_is_visible_and_never_falls_back(qt_speech):
+    created, *_ = qt_speech
+    speech = voice.SpeechOutput(output_device=b"disconnected".hex())
+    assert not speech.available and "disconnected" in speech.error
+    assert not created
+
+
+def test_sapi_fallback_cannot_silently_ignore_requested_speaker(qt_speech):
+    created, _, failed_engines, *_ = qt_speech
+    failed_engines.add("winrt")
+    speech = voice.SpeechOutput(output_device=b"headphones".hex())
+    assert not speech.available
+    assert [engine.name for engine in created] == ["winrt"]

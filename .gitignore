@@ -9,6 +9,7 @@ __pycache__/
 .env
 build/
 dist/
+transfer/
 *.spec
 artifacts/*.log
 artifacts/*.json

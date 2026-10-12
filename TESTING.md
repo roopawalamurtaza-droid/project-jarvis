@@ -1,5 +1,23 @@
 # Verification record — 2026-10-13
 
+Phase 2 source verification: 280 tests passed in 41.81s before the last three
+health/export regressions were added. Final count, packaged build outcome and
+push/archive record are in NEXT_STEPS.md. Ruff passes; dependency audit found no
+known vulnerabilities on this date. See UPDATE_REPAIR.md for per-feature evidence.
+
+Synthetic PCM through actual Qt/VAD/offline STT/local Ollama/Windows playback
+verified automatic requests, same-session follow-up, standalone wake/greeting,
+compound sleep, mute closure, and authorized Chrome/VS Code launches. Launch
+process evidence is not a window visibility assertion. The generated source
+sample measured wake STT 0.578s after a 1.016s endpoint, provider response 6.797s,
+TTS engine startup 0.031s on the follow-up, and 1769 UI timer ticks. Maximum
+timer gap was 0.500s during synthetic fixture generation in the diagnostic;
+it is not a production frame-latency benchmark. Human acoustic onset is unmeasured.
+
+Actual five-second microphone and HyperX speaker checks are detailed in
+docs/WAKE_ENGINES.md and docs/SPEECH_QUALITY.md. User speech in a real room has
+not passed an end-to-end acceptance run; do not confuse generated WAVs with it.
+
 Tests were executed on Windows 11 with Python 3.12.14, using isolated temporary
 data and mocked cloud requests. Real local model/audio checks were separate.
 
