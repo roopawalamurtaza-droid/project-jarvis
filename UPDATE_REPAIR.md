@@ -22,6 +22,12 @@ The desktop uses its backend service in-process, not a separate web frontend.
 
 ## Actual repairs
 
+The first Phase 2 rebuild found an actual packaging error: PyInstaller's generic
+WebRTC hook requested distribution metadata named `webrtcvad`, but the Windows
+binary wheel is distributed as `webrtcvad-wheels`. A project-local hook now
+collects the correct metadata/native module. Final frozen checks, not source
+test success, determine whether this repair passes.
+
 - Rebuild includes handsfree.py, conversation.py, voice_controller.py,
   speech_text.py, modified desktop/settings/provider command integration, Qt
   Multimedia, WebRTC binary VAD, timezone data, and offline STT dependencies.

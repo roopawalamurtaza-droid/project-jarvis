@@ -123,6 +123,8 @@ Native STT cannot safely be killed; bounded shutdown discards late output.
   instance guard, and no fresh-PC frozen acceptance. Do not overwrite a running app.
 - Older startup ImportErrors came from bundled ICU DLL contamination during the
   first Phase 1 packaging attempt. Package script sanitizes PATH; preserve this fix.
+- Phase 2 packaging also needed the project-local WebRTC hook: import module
+  `webrtcvad` belongs to distribution `webrtcvad-wheels`. Preserve that metadata fix.
 
 ## Testing evidence (Windows 11)
 
