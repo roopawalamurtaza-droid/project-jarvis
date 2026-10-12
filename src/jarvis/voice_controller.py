@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import queue
 import time
 
@@ -24,6 +25,7 @@ class VoiceController(QObject):
         self._speech_requested_at = 0.0
         self._last_voice_at = 0.0
         self._resume_after = 0.0
+        self._recognition_started_at = None
         self.timer = QTimer(self)
         self.timer.setInterval(80)
         self.timer.timeout.connect(self.poll)
@@ -46,6 +48,8 @@ class VoiceController(QObject):
         state = self.session.state.value.replace("_", " ").title()
         microphone = "gated (stream open)" if gated else "active" if capture else "off"
         text = f"Voice: {state} · microphone {microphone}"
+        if self._recognition_started_at is not None:
+            text += " · recognizing speech"
         self.window.voice_status.setText(text)
         self.window.listen_button.setText("Pause listening" if self.active else "Resume listening")
         if self.window.tray:
@@ -109,6 +113,7 @@ class VoiceController(QObject):
     def stop(self, mode="pause"):
         self.epoch += 1
         self._resume_after = 0
+        self._finish_recognition("cancelled")
         if mode == "mute":
             self.session.mute()
         elif mode == "disable":
@@ -121,6 +126,11 @@ class VoiceController(QObject):
             self.window._run("handsfree-close", capture.close)
         if self.window._speech:
             self.window._speech.stop()
+        status = {
+            "mute": "Voice muted · microphone off.",
+            "disable": "Hands-free disabled · microphone off.",
+        }.get(mode, "Listening paused · microphone off.")
+        self.window._status(status)
         self._display()
 
     def toggle(self):
@@ -148,6 +158,7 @@ class VoiceController(QObject):
 
     def gate(self):
         self._resume_after = 0
+        self._finish_recognition("cancelled")
         if self.input:
             self.input.set_mode("gated")
 
@@ -162,6 +173,7 @@ class VoiceController(QObject):
             return
         mode = "wake" if self.session.state == VoiceState.WAKE_WORD_LISTENING else "command"
         self.input.set_mode(mode)
+        self._listening_status()
         self._display()
 
     def poll(self):
@@ -189,19 +201,43 @@ class VoiceController(QObject):
             self._listen_for_state()
             self._display()
 
+    def _finish_recognition(self, outcome):
+        if self._recognition_started_at is not None:
+            elapsed = time.monotonic() - self._recognition_started_at
+            self.metrics["last_recognition_seconds"] = round(elapsed, 3)
+            # No recognized text or audio is retained in logs.
+            logging.getLogger("jarvis").info(
+                "Voice recognition finished (%s, %.3fs)", outcome, elapsed
+            )
+        self._recognition_started_at = None
+
+    def _listening_status(self, prefix=""):
+        if self.session.state == VoiceState.WAKE_WORD_LISTENING:
+            self.window._status(f'{prefix}Listening for "{self.window.settings.wake_phrase}".')
+        elif self.session.state in {VoiceState.ACTIVATED, VoiceState.FOLLOW_UP_LISTENING}:
+            self.window._status(f"{prefix}Listening for your next command.")
+        elif self.session.state == VoiceState.ASSISTANT_SPEAKING:
+            self.window._status("Speaking reply…")
+
     def handle(self, item):
         event = item["event"]
+        if event in {"wake", "utterance", "stop_command", "empty", "ignored", "error"}:
+            self._finish_recognition(event)
         if event == "error":
             self.failed(item.get("error") or item.get("message") or "Microphone disconnected.")
             return
         if event == "ready":
+            self._listening_status()
             self._display()
         elif event == "speech_started":
             if self.session.state in {VoiceState.ACTIVATED, VoiceState.FOLLOW_UP_LISTENING}:
                 self.session.speech_started()
             self._display()
         elif event == "transcribing":
+            self._recognition_started_at = time.monotonic()
+            logging.getLogger("jarvis").info("Voice recognition started (%s)", item.get("mode"))
             self.window._status("Recognizing speech locally…")
+            self._display()
         elif event == "wake":
             self._last_voice_at = item.get("last_voice_at", 0.0)
             command = item.get("command", "").strip()
@@ -218,6 +254,7 @@ class VoiceController(QObject):
                 self.speak(acknowledgment)
             else:
                 self._listen_for_state()
+                self._listening_status()
             self._display()
         elif event == "utterance":
             self._last_voice_at = item.get("last_voice_at", 0.0)
@@ -229,6 +266,14 @@ class VoiceController(QObject):
             if self.session.state == VoiceState.USER_SPEAKING:
                 self.session.response_finished()
                 self._listen_for_state()
+            self._listening_status("No clear speech recognized. ")
+            self._display()
+        elif event == "ignored":
+            self.metrics["recognition_rejections"] = (
+                self.metrics.get("recognition_rejections", 0) + 1
+            )
+            self._listening_status()
+            self._display()
         elif event == "busy":
             self.window._status(item.get("message", "Recognition is busy. Please repeat."))
 
@@ -270,6 +315,7 @@ class VoiceController(QObject):
             speech.stop()
         self.gate()
         self.session.assistant_speaking()
+        self.window._status("Speaking reply…")
         self._display()
         if self.input and self.window.settings.voice_interruption:
             # Explicit headset-only opt-in; default acoustic protection is half duplex.
@@ -297,6 +343,7 @@ class VoiceController(QObject):
             self.gate()
             # Flush speaker tail before accepting speech; pending results are invalidated.
             self._resume_after = time.monotonic() + 0.35
+            self.window._status("Finishing playback before listening…")
             self._display()
 
     def playback_started(self):

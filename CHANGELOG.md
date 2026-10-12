@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.1 — 2026-10-13
+
+- Repair completed wake-miss and empty transcription paths that left Recognizing
+  speech on screen; restore actual listening state and accept the next wake turn.
+- Clear recognition on playback, cancellation and ignored headset stop phrases.
+- Show active recognition separately from wake-listening state. Log lifecycle
+  outcomes and elapsed time without audio or recognized words.
+- Add rejection/recovery regressions and an unmatched-speech segment to the
+  packaged voice diagnostic before its next valid wake command.
+
 ## 0.2.0 — 2026-10-13
 
 - Opt-in local wake phrase + WebRTC VAD, bounded offline transcription, automatic

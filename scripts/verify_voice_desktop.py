@@ -52,6 +52,9 @@ def main():
     follow = generate_fixture(fixtures / "desktop-followup.wav", "Reply with just the word ready.")
     end = generate_fixture(fixtures / "desktop-end.wav", "Thanks Jarvis. Go to sleep.")
     wake_only = generate_fixture(fixtures / "desktop-wake-only.wav", "Hey Jarvis.")
+    unmatched = generate_fixture(
+        fixtures / "desktop-unmatched.wav", "Please open the weather forecast."
+    )
     backend = PlaybackBackend()
     original = handsfree.HandsFreeInput
     handsfree.HandsFreeInput = lambda settings, **kwargs: original(
@@ -97,6 +100,16 @@ def main():
                 and "handsfree-start" not in window._jobs
             )
         )
+        play(unmatched)
+        wait(lambda: window.voice_controller.metrics.get("recognition_rejections", 0) >= 1)
+        if (
+            window.voice_controller.session.state != VoiceState.WAKE_WORD_LISTENING
+            or "Recognizing" in window.status_label.text()
+            or "YOU\n" in window.conversation.toPlainText()
+        ):
+            raise RuntimeError("Unmatched speech did not finish safely in wake listening")
+        report["unmatched_speech_returns_to_wake"] = True
+        report["status_after_unmatched_speech"] = window.status_label.text()
         started = time.monotonic()
         play(wake)
         wait(lambda: "YOU\nwhat time is it?".lower() in window.conversation.toPlainText().lower())

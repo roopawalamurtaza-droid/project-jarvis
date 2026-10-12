@@ -503,6 +503,8 @@ class HandsFreeInput:
                     self._emit("utterance", generation, mode, **details)
                 elif mode == "stop" and is_stop_command(text):
                     self._emit("stop_command", generation, mode, **details)
+                elif mode == "stop":
+                    self._emit("ignored", generation, mode, reason="stop_phrase_not_found")
             except Exception as exc:
                 with self._lock:
                     if generation != self._generation:

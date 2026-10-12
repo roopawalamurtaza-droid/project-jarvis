@@ -13,7 +13,7 @@ from jarvis.health import build_identity, startup_health
 
 def test_health_identifies_source_without_recording(tmp_path):
     identity = build_identity()
-    assert identity["version"] == "0.2.0"
+    assert identity["version"] == "0.2.1"
     assert identity["git_commit"]
     assert identity["executable"]
     report = startup_health(Settings(data_dir=tmp_path))

@@ -45,6 +45,11 @@ Install the missing speech model explicitly, as one command:
 
 A disconnected microphone enters Error. Refresh/select a valid device, save,
 and resume. Check Windows Privacy & security > Microphone if access is denied.
+Unrelated speech is transcribed locally and discarded; no chat words are expected.
+Afterward the status returns to listening for the wake phrase. Version 0.2.1 fixes
+the completed-result path that previously left Recognizing speech on screen.
+While recognition is genuinely pending, the Voice line says recognizing speech.
+Pause/Mute clears that activity and closes the microphone. See RECOGNITION_REPAIR.md.
 Start with Windows uses the current user's Run entry. Minimize-to-tray is optional.
 Proactive speech defaults off and reports actual task events, with quiet hours
 and frequency limits. Scheduling, screen observation and autonomous planning are absent.
