@@ -2,7 +2,46 @@
 
 Continue this checkout. Read PROJECT_HANDOFF.md and UPDATE_REPAIR.md first.
 
-## Actual build and launch
+## Latest repair: 0.2.1 recognition completion
+
+The user subsequently reported Recognizing speech stuck while Voice remained in
+Wake Word Listening. Reproduced completed wake-miss/empty-result paths failed
+three initial regressions. Version 0.2.1 explicitly completes those paths, shows
+actual pending recognition, clears pause/mute/playback status and preserves
+cancellation and listening boundaries. See RECOGNITION_REPAIR.md.
+
+- Full final suite: **295 passed in 47.93s**, including twelve new regressions;
+  Ruff lint and all 46 format checks passed. Dependency versions are unchanged;
+  only the project package version changed in uv.lock.
+- Tested runtime build: **0.2.1**, commit
+  `d1f0fe0622a4e429749773d09f5d7b13109a5f30`, clean at packaging.
+- Embedded build date: `2026-10-12T22:16:02+00:00`; executable file timestamp
+  `2026-10-12 22:17:21 UTC`, length 14,554,465 bytes. Same launcher/path/data folder.
+- Executable SHA256:
+  `ab0dfcf9294df1c449683c336f126dd76e39bf68dc457a65bf5da8a09f000641`.
+- Final frozen GUI smoke and extended voice diagnostic both exit **0**. Generated
+  unrelated speech completed as ignored and returned to `Listening for "hey jarvis"`
+  with no chat request. The next valid wake/time request, real local AI follow-up,
+  Windows speech, standalone wake, sleep and mute all passed. No microphone was
+  opened by that diagnostic; this is generated-speech integration evidence.
+- All 20 embedded source hashes match the current runtime code. Further commits
+  containing only documents/screenshots do not alter this tested runtime.
+- Runtime repair source was successfully pushed on `feature/handsfree-voice`.
+  User settings/memory/keys were retained. Old 0.2.0 folder is backed up at
+  `transfer/phase2-build-0.2.0`; 0.2.1 was relaunched with the existing saved opt-ins.
+- Current Windows artifact: `transfer/JARVIS-Windows-0.2.1.zip`, 154,414,447 bytes,
+  1,111 verified files, full folder plus INSTALL.txt and BUILD_MANIFEST.json.
+  SHA256: `90d66045da449ac55c00d4f5b82517c843da6346eb04a92634c90d91c87b90e7`.
+  Current source/history archive remains `transfer/PROJECT_JARVIS_HANDOFF.zip`;
+  its MANIFEST and adjacent SHA256 identify the final handoff checkpoint.
+- The user confirmed on the actual microphone that **0.2.1 answers the wake/time
+  request and returns to listening**. This new live acceptance is distinct from
+  the earlier user-confirmed 0.2.0 sequence below. Native inference cannot be forcibly killed;
+  this fix does not silently mark genuinely unfinished transcription as complete.
+
+The following sections retain the **earlier 0.2.0 record**, not the current build.
+
+## Earlier 0.2.0 build and launch
 
 - Branch: `feature/handsfree-voice`.
 - Private repository: https://github.com/roopawalamurtaza-droid/project-jarvis.git.

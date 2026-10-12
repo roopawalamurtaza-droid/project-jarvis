@@ -36,11 +36,13 @@ See [the voice guide](docs/HANDS_FREE.md) for tuning and verification limits.
 Settings shows version, Git commit, build time, executable path, and live startup
 health. Source edits require rebuilding: the launcher runs `dist\JARVIS\JARVIS.exe`.
 
-The repaired 0.2.0 runtime build is commit `6170121a85af`, packaged on
-12 October 2026 at 21:53:26 UTC. Automated tests (283), frozen voice checks and the
-user's live Chrome/VS Code follow-up/sleep demonstration passed. Later handoff
-documentation commits retain the same runtime source hashes. See NEXT_STEPS.md
-for the exact executable identity, artifacts and remaining acceptance boundaries.
+The latest recognition repair is **0.2.1**, runtime source commit `d1f0fe0622a4`.
+Completed wake misses and empty results now return to listening instead of leaving
+Recognizing speech on screen; genuine pending work remains visibly pending.
+All **295 tests passed**. See NEXT_STEPS.md for the verified packaged identity and
+transfer artifacts, and RECOGNITION_REPAIR.md for the reproduced failure and fix.
+The earlier 0.2.0 build passed the user's live Chrome/VS Code follow-up/sleep
+demonstration; that does not erase the subsequently reported recognition bug.
 
 ## What works
 

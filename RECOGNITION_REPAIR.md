@@ -25,8 +25,17 @@ reset; that was fixed before final testing. The packaged diagnostic now injects
 an unrelated utterance, verifies completion in wake mode with no chat request,
 then exercises a valid wake, local AI, speech, follow-up and sleep.
 
-Final test/build identity, packaging and transfer results are recorded in
-NEXT_STEPS.md. This repair addresses reproduced completed-result handling. It
+Final tests: **295 passed in 47.93s**, Ruff lint and 46 format checks passed.
+Frozen GUI smoke and the extended voice diagnostic both exited 0 against runtime
+commit `d1f0fe0622a4`, version 0.2.1. Unmatched generated speech returned to wake
+listening without a chat request; the next valid wake/local AI/playback turn
+succeeded. The replacement was launched with preserved settings. Build hashes,
+packaging and transfer results are recorded in NEXT_STEPS.md.
+The user subsequently confirmed the actual microphone wake/time request answers
+and returns to listening on 0.2.1. This is user-reported live acceptance, separate
+from generated-speech measurements and the untested broader acoustic conditions.
+
+This repair addresses reproduced completed-result handling. It
 does not claim native Whisper inference can be forcibly interrupted or that
 human wake accuracy under noise/accents is guaranteed. If actual inference hangs,
 use Pause/Resume and retain the privacy-safe lifecycle logs for investigation.

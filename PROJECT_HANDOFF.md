@@ -3,6 +3,9 @@
 Prepared 13 October 2026. Continue this repository; do not start a new scaffold.
 Read NEXT_STEPS.md for the final verification/transfer record and UPDATE_REPAIR.md
 for the user's report of an old executable appearing unchanged.
+The subsequent completed-recognition bug and 0.2.1 repair are documented in
+RECOGNITION_REPAIR.md. Use the latest record in NEXT_STEPS.md, not the earlier
+0.2.0 build identity when choosing the executable.
 
 ## Objective and milestone
 
@@ -132,7 +135,7 @@ Native STT cannot safely be killed; bounded shutdown discards late output.
 Tests distinguish fakes, synthetic speech, and real hardware. See TESTING.md,
 docs/SPEECH_QUALITY.md, docs/WAKE_ENGINES.md and final NEXT_STEPS.md.
 
-- Final full suite: 283 passed in 39.96s; final focused health/export checks also
+- Latest full suite: 295 passed in 47.93s; final focused health/export checks also
   passed. Security/path/junction/DPAPI/storage,
   mocked providers/API, offscreen GUI, audio framing/state/permission regressions.
 - Actual local qwen3:8b response through the GUI, same-session follow-up, no Hold
@@ -152,6 +155,13 @@ docs/SPEECH_QUALITY.md, docs/WAKE_ENGINES.md and final NEXT_STEPS.md.
   wake/time reply and completing Chrome/VS Code follow-up and compound sleep.
   This user report is distinct from agent measurements or a recorded acoustic test.
   Further room/noise/device/fresh-machine coverage remains open.
+- The later stuck-recognition report was reproduced as completed wake-miss/empty
+  results retaining the old status. Twelve 0.2.1 regression cases cover recovery,
+  continued valid requests, honest pending work, playback and late cancellation.
+  Native Whisper inference cannot be forcibly terminated; an actual native hang
+  remains a distinct limit. Lifecycle logs omit recognized words/audio.
+  Frozen recovery/voice checks passed, and the user confirmed a live 0.2.1
+  wake/time answer returns to listening on the actual microphone.
 
 ## Dependencies and environment
 
