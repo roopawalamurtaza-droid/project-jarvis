@@ -15,7 +15,7 @@ The minimum is 430 × 530 logical pixels. Normal and reduced-motion isolated
 about 93.6 MiB working set, with audio and AI disabled. This is not a long soak
 or active voice-resource benchmark.
 
-Next: packaged live-microphone acceptance, compact/background/reduced-motion
+Next: broader acoustic coverage, compact/background/reduced-motion human
 review, long-idle measurements and fresh-Windows distribution. Preserve local
 data, keys, model isolation, mic consent and bounded execution.
 
@@ -49,12 +49,18 @@ data, keys, model isolation, mic consent and bounded execution.
   The 0.844s maximum GUI timer gap includes synthetic fixture generation and
   is not a steady-state latency or human acoustic benchmark.
 - Normal visible application **was launched and verified** on this Windows PC:
-  PID 60132, title `JARVIS · Command Center`, nonzero window handle, responsive,
+  title `JARVIS · Command Center`, nonzero window handle, responsive,
   actual process path `C:\Jarvis\dist\JARVIS\JARVIS.exe`, data `.local`.
   The standalone process view was checked with normal Windows permissions;
   the agent sandbox cannot enumerate this external desktop process.
-  Human 0.3.0 microphone acceptance is requested and remains pending until the
-  user reports a result. Earlier 0.2.x acceptance does not establish it.
+  The latest process check also confirmed the same path and responsive window.
+- **Human 0.3.0 acceptance passed:** the user confirmed the full live sequence
+  “Hey Jarvis, what time is it?” → “Open Chrome” → “And open VS Code” →
+  “Thanks Jarvis, go to sleep.” Spoken replies, follow-up without a second wake
+  phrase and return to wake listening worked without holding the microphone
+  button. This is direct user confirmation on the current build, separate from
+  synthetic diagnostics and earlier 0.2.x acceptance. No room/noise/accuracy
+  benchmark or fresh-PC acceptance is implied.
 - The retained last error is `ProviderError` at `2026-10-13T20:32:43+00:00`
   from the first live Phase 3 check while Ollama was stopped. Starting the
   installed loopback service resolved it; subsequent live AI, frozen startup

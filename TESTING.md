@@ -11,6 +11,11 @@ not human acceptance on displays at those DPI settings. The
 150% live local qwen3:8b request completed in 9.125s with 203 UI timer ticks and a
 0.235s maximum gap. This is not a human acoustic or fresh-machine acceptance test.
 See PHASE3_RELEASE.md and final NEXT_STEPS.md for packaging/hardware limits.
+The final 0.3.0 frozen GUI, Phase 3 and generated-speech/shutdown checks passed.
+The user also confirmed the live wake/time, Chrome, VS Code follow-up and sleep
+sequence works with spoken replies and without holding the microphone button.
+This direct current-build acceptance is separate from the synthetic diagnostics;
+broader room/noise/accent, soak and fresh-machine acceptance remain incomplete.
 Two isolated 12-second offscreen idle UI samples measured 1.69% of one logical
 core and 93.56 MiB working set with motion, then 0.91% and 93.57 MiB with reduced
 motion and the core timer stopped. Microphone, STT and provider requests were

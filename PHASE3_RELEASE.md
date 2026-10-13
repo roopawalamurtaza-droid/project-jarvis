@@ -94,8 +94,10 @@ window visibility or project loading inside VS Code was asserted.
 Screenshots come from the actual application with generated diagnostic data.
 Canva returned no completed artifact/job ID before interruption; native vectors
 are delivered. See docs/DESIGN_SYSTEM.md. Frozen package checks and current-PC
-launch are recorded in NEXT_STEPS.md. Prior human acoustic acceptance belongs to
-0.2.1; it is not silently relabelled as 0.3.0. Samples are not latency/accuracy SLAs.
+launch are recorded in NEXT_STEPS.md. The user separately confirmed the current
+0.3.0 live wake/time → Chrome → VS Code follow-up → sleep demonstration, with
+spoken replies and no Hold button. This new report is distinct from prior 0.2.x
+acceptance and generated-speech tests. Samples are not latency/accuracy SLAs.
 
 Incomplete: streaming, dedicated keyword model, full duplex/AEC, synthesized PCM
 waveform, screenshots/clipboard understanding, project test/build execution,

@@ -14,6 +14,9 @@ dependency; workflow tables are additive. Preserve original voice/privacy/path/
 provider limits, sanitized package PATH, WebRTC hook and generation cancellation.
 Live `.local` data/keys/models must stay out of Git/archives. Read current
 Diagnostics then test the actual microphone; do not infer hardware success.
+Current 0.3.0 frozen diagnostics passed and the user separately confirmed the
+live wake/time, Chrome, VS Code follow-up and sleep sequence with spoken replies
+and no Hold button. NEXT_STEPS.md records the tested runtime identity and limits.
 Outstanding capabilities are explicit in PHASE3_RELEASE.md. Phase 2 failure and
 testing records below are historical; shared architecture and continuation
 commands describe the current checkout.
