@@ -60,6 +60,10 @@ class Settings(BaseModel):
     start_with_windows: bool = False
     minimize_to_tray: bool = False
     history_retention_days: int = Field(default=30, ge=1, le=3650)
+    reduce_motion: bool = False
+    compact_always_on_top: bool = False
+    desktop_context_enabled: bool = False
+    speaking_style: Literal["concise", "professional", "conversational", "technical"] = "concise"
 
     @field_validator("timezone")
     @classmethod

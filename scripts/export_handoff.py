@@ -60,7 +60,7 @@ def export(root: Path) -> Path:
         )
         archive.writestr(
             "TRANSFER.txt",
-            "Read source/PROJECT_HANDOFF.md first. For Git history, run: git clone -b feature/handsfree-voice project-jarvis.bundle Jarvis\nInstall dependencies and models as documented. No user data or keys are included.\n",
+            f"Read source/PROJECT_HANDOFF.md first. For Git history, run: git clone -b {branch} project-jarvis.bundle Jarvis\nInstall dependencies and models as documented. No user data or keys are included.\n",
         )
     with zipfile.ZipFile(target) as archive:
         if archive.testzip() is not None:

@@ -178,6 +178,7 @@ class HandsFreeInput:
         self._closed = False
         self._stream: Any = None
         self._error: str | None = None
+        self._level = 0.0
         self._frames: queue.Queue = queue.Queue(maxsize=INPUT_QUEUE_FRAMES)
         self._utterances: queue.Queue = queue.Queue(maxsize=1)
         self._workers: list[threading.Thread] = []
@@ -187,6 +188,12 @@ class HandsFreeInput:
     def generation(self) -> int:
         with self._lock:
             return self._generation
+
+    @property
+    def level(self) -> float:
+        """Latest measured RMS, never inferred from recognition or animation."""
+        with self._lock:
+            return self._level if self._running and self._mode != "gated" else 0.0
 
     @property
     def mode(self) -> str:
@@ -418,6 +425,8 @@ class HandsFreeInput:
         if data.ndim != 2 or data.shape != (FRAME_SAMPLES, 1) or frames != FRAME_SAMPLES:
             self._fail_capture("The microphone returned an invalid frame. Please resume listening.")
             raise sd.CallbackStop
+        with self._lock:
+            self._level = float(np.sqrt(np.mean(np.square(data[:, 0]))))
         try:
             self._frames.put_nowait((generation, mode, data[:, 0].copy(), time.monotonic()))
         except queue.Full:

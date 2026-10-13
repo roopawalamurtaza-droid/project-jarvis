@@ -69,7 +69,7 @@ def test_saved_project_paths_use_permissions_and_approval(tmp_path):
         ("Remind me to study.", "not available"),
         ("What's my next task?", "no pending"),
         ("Continue where we left off.", "no saved"),
-        ("What's happening on my PC?", "unavailable"),
+        ("What's happening on my PC?", "Screenshots and clipboard access are not implemented"),
     ],
 )
 def test_unavailable_context_never_invented(tmp_path, message, expected):

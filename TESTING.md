@@ -1,4 +1,14 @@
-# Verification record — 2026-10-13
+# Verification record — 2026-10-14
+
+Phase 3 source verification: **443 passed in 91.94s** (baseline295 passed in39.29s).
+Ruff check and all60 format checks pass. Actual Qt workflows/approvals/filesystem,
+memory persistence/relevance, permission/cancellation/UI draft/selection, measured
+system status, exact business math and preserved voice/security regressions are
+covered. Real rendered native screens passed at100%,150%,200% Qt scaling; the
+150% live local qwen3:8b request completed in9.125s with203 UI timer ticks and a
+0.235s maximum gap. This is not a human acoustic or fresh-machine acceptance test.
+See PHASE3_RELEASE.md and final NEXT_STEPS.md for packaging/hardware limits.
+The following Phase2 records are historical.
 
 Phase 2 source verification: 280 tests passed in 41.81s before the last three
 health/export regressions were added. Final count, packaged build outcome and

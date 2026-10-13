@@ -49,7 +49,7 @@ def local_command(message: str, settings, store) -> tuple[str, dict] | str | Non
     if text in {"what's my next task", "what is my next task"}:
         tasks = [item for item in store.tasks() if item.get("state") == "awaiting_approval"]
         if tasks:
-            return f"An action needs approval: {tasks[0].get('tool', 'local action').replace('_', ' ')}. Review Activity."
+            return f"An action needs approval: {tasks[0].get('tool', 'local action').replace('_', ' ')}. Review Mission Control."
         memories = [item for item in store.memories() if item.get("category") == "task"]
         if memories:
             return f"Saved task: {memories[0]['key']}. {memories[0]['content'][:600]} No due-date order is configured."
@@ -70,5 +70,5 @@ def local_command(message: str, settings, store) -> tuple[str, dict] | str | Non
             f"{item['key']}: {item['content'][:400]}" for item in memories[:3]
         )
     if text in {"what's happening on my pc", "what is happening on my pc"}:
-        return "Screen and system monitoring are unavailable. I can report saved tasks and actions in Activity."
+        return "Open System for measured CPU, RAM and available GPU information. Foreground app and title require the separate Settings permission. Screenshots and clipboard access are not implemented."
     return None

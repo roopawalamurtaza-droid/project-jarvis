@@ -1,5 +1,22 @@
 # Project JARVIS engineering handoff
 
+## Current Phase3 checkpoint — 14October2026
+
+Continue **codex/phase3-ultron**, version0.3.0, in the same private repository.
+PHASE3_RELEASE.md is the current feature/architecture/commands/security/testing
+contract. NEXT_STEPS.md has final packaging/push/transfer evidence. Main and
+feature/handsfree-voice preserve earlier milestones; default branch is unchanged.
+
+Baseline295 and integrated443 tests passed. Native core/full/compact/background,
+task/approval activity, structured context, multi-step routines, memory explorer,
+measured resources and separate opt-in business records are implemented. No new
+dependency; workflow tables are additive. Preserve original voice/privacy/path/
+provider limits, sanitized package PATH, WebRTC hook and generation cancellation.
+Live `.local` data/keys/models must stay out of Git/archives. Read current
+Diagnostics then test the actual microphone; do not infer hardware success.
+Outstanding capabilities are explicit in PHASE3_RELEASE.md. The following0.2.1
+handoff is retained as historical foundational context.
+
 Prepared 13 October 2026. Continue this repository; do not start a new scaffold.
 Read NEXT_STEPS.md for the final verification/transfer record and UPDATE_REPAIR.md
 for the user's report of an old executable appearing unchanged.

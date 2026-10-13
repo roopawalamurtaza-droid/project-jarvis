@@ -23,14 +23,17 @@ from PySide6.QtGui import (
     QFont,
     QFontDatabase,
     QIcon,
+    QKeySequence,
     QPainter,
     QPixmap,
+    QShortcut,
     QTextCharFormat,
 )
 from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
     QComboBox,
+    QDialog,
     QDoubleSpinBox,
     QFileDialog,
     QFormLayout,
@@ -41,6 +44,7 @@ from PySide6.QtWidgets import (
     QListWidget,
     QMainWindow,
     QMenu,
+    QMessageBox,
     QPlainTextEdit,
     QPushButton,
     QScrollArea,
@@ -221,17 +225,38 @@ class MainWindow(QMainWindow):
         self._last_task_id: str | None = None
         self._selected_memory: Any = None
         self._stopped = False
+        self._routines = []
+        self._workflow_runs = []
+        self._projects = []
+        self._routine_steps = []
+        self._routine_dirty = False
+        self._editing_routine_id = None
+        self._last_reply = {}
+        self._last_latency = None
+        self._awareness_data = {}
+        self._context_snapshot = {}
+        from .awareness import DesktopContextProvider, SystemMetricsProvider
+        from .workflows import WorkflowEngine
+
+        self.workflows = getattr(service, "workflows", None) or WorkflowEngine(
+            store, engine, settings
+        )
+        self._metrics_provider = SystemMetricsProvider()
+        self._context_provider = DesktopContextProvider()
         from .health import build_identity
 
         self.build_info = build_identity()
         self.health_result = {"backend": "Health check pending", "speech_model": "Not checked"}
-        self.setWindowTitle("JARVIS · Personal workspace")
+        self.setWindowTitle("JARVIS · Command Center")
         self.setWindowIcon(_icon())
         self.resize(1180, 800)
         self.setMinimumSize(760, 560)
-        self.setStyleSheet(STYLE)
+        from .ui_components import STYLE as PHASE3_STYLE
+
+        self.setStyleSheet(PHASE3_STYLE)
         self._build()
         self._build_tray()
+        self._build_overlay()
         self._shutdown_timer = QTimer(self)
         self._shutdown_timer.setInterval(100)
         self._shutdown_timer.timeout.connect(self._poll_shutdown)
@@ -241,12 +266,23 @@ class MainWindow(QMainWindow):
         self._append_message(
             "JARVIS",
             "Your workspace is ready. Choose a provider in Settings, then type a message. "
-            "Desktop actions appear in Activity with their actual results. "
+            "Desktop actions appear in Mission Control with their actual results. "
             "Enable hands-free listening in Settings, or hold the microphone button to talk.",
         )
         from .voice_controller import VoiceController
 
         self.voice_controller = VoiceController(self)
+        self._presence_timer = QTimer(self)
+        self._presence_timer.setInterval(160)
+        self._presence_timer.timeout.connect(self._update_presence)
+        self._presence_timer.start()
+        self._system_timer = QTimer(self)
+        self._system_timer.setInterval(5000)
+        self._system_timer.timeout.connect(self.refresh_system)
+        self._system_timer.start()
+        shortcut = QShortcut(QKeySequence("Ctrl+K"), self)
+        shortcut.activated.connect(self.command_palette)
+        self._palette_shortcut = shortcut
         self._update_build_health()
         # Reads are asynchronous; initial paint does not wait for the database.
         QTimer.singleShot(0, self.refresh)
@@ -263,10 +299,21 @@ class MainWindow(QMainWindow):
         side = QVBoxLayout(self.sidebar)
         side.setContentsMargins(16, 24, 16, 18)
         side.addWidget(_label("JARVIS", "Brand"))
-        side.addWidget(_label("PERSONAL WORKSPACE", "Muted"))
+        side.addWidget(_label("AMBIENT INTELLIGENCE", "Muted"))
         side.addSpacing(27)
         self.nav: list[QPushButton] = []
-        for index, title in enumerate(("Assistant", "Activity", "Memory", "Audit", "Settings")):
+        self.page_titles = (
+            "Assistant",
+            "Mission Control",
+            "Memory Explorer",
+            "Timeline",
+            "Settings",
+            "Workflows",
+            "System",
+            "Diagnostics",
+            "Business",
+        )
+        for index, title in enumerate(self.page_titles):
             button = QPushButton(title)
             button.setObjectName("Nav")
             button.setCheckable(True)
@@ -277,6 +324,7 @@ class MainWindow(QMainWindow):
         self.privacy_label = _label("", "Muted", True)
         side.addWidget(self.privacy_label)
         side.addSpacing(12)
+        side.addWidget(_button("Commands · Ctrl K", self.command_palette))
         side.addWidget(_button("Compact assistant", self.toggle_compact))
         side.addWidget(_button("Emergency stop", self.emergency_stop, kind="Danger"))
         outer.addWidget(self.sidebar)
@@ -298,6 +346,10 @@ class MainWindow(QMainWindow):
         self.pages.addWidget(self._memory_page())
         self.pages.addWidget(self._audit_page())
         self.pages.addWidget(self._settings_page())
+        self.pages.addWidget(self._workflows_page())
+        self.pages.addWidget(self._system_page())
+        self.pages.addWidget(self._diagnostics_page())
+        self.pages.addWidget(self._business_page())
         main.addWidget(self.pages, 1)
         main.addWidget(self.status_label)
         outer.addLayout(main, 1)
@@ -305,19 +357,46 @@ class MainWindow(QMainWindow):
         self._update_privacy_label()
 
     def _assistant_page(self) -> QWidget:
+        from .ui_components import CoreWidget
+
         page = QWidget()
         layout = QVBoxLayout(page)
         layout.setContentsMargins(0, 0, 0, 0)
         tools = QHBoxLayout()
-        tools.addWidget(_label("A focused space to think and act", "Muted"))
+        tools.addWidget(_label("YOUR COMMAND SPACE", "Muted"))
         tools.addStretch()
         tools.addWidget(_button("New conversation", self.new_conversation))
         layout.addLayout(tools)
+        self.presence_panel = QFrame()
+        self.presence_panel.setObjectName("Panel")
+        presence = QHBoxLayout(self.presence_panel)
+        self.core = CoreWidget()
+        self.core.set_reduce_motion(self.settings.reduce_motion)
+        presence.addWidget(self.core)
+        self.presence_details = QWidget()
+        self.presence_details.setObjectName("PresenceDetail")
+        detail = QVBoxLayout(self.presence_details)
+        detail.addWidget(_label("Intelligence, under your control", "Title", True))
+        self.presence_caption = _label("Ready for a request · microphone off", "Muted", True)
+        detail.addWidget(self.presence_caption)
+        self.context_ribbon = _label("CONTEXT · No project selected", "Status", True)
+        detail.addWidget(self.context_ribbon)
+        self.provider_ribbon = _label("", "Muted", True)
+        detail.addWidget(self.provider_ribbon)
+        quick = QHBoxLayout()
+        quick.addWidget(_button("Choose project", lambda: self._navigate(5)))
+        quick.addWidget(_button("Review approvals", lambda: self._navigate(1)))
+        detail.addLayout(quick)
+        presence.addWidget(self.presence_details, 1)
+        layout.addWidget(self.presence_panel)
         self.conversation = QTextEdit()
         self.conversation.setObjectName("Conversation")
         self.conversation.setReadOnly(True)
         self.conversation.setAcceptRichText(False)
         layout.addWidget(self.conversation, 1)
+        self.compact_response = _label("Ready for your request", "Muted", True)
+        self.compact_response.hide()
+        layout.addWidget(self.compact_response, 1)
         panel = QFrame()
         panel.setObjectName("Panel")
         composer_layout = QVBoxLayout(panel)
@@ -394,6 +473,8 @@ class MainWindow(QMainWindow):
             )
         )
         layout.addWidget(form)
+        self.mission_summary = _label("No active local operation", "Status", True)
+        layout.addWidget(self.mission_summary)
         self.task_table = _table(["Task", "Action", "State"])
         self.task_table.itemSelectionChanged.connect(self._select_task)
         self.task_table.setColumnWidth(0, 140)
@@ -445,6 +526,7 @@ class MainWindow(QMainWindow):
         self.memory_category = QComboBox()
         self.memory_category.setEditable(True)
         self.memory_category.addItems(["preferences", "project", "business", "task", "knowledge"])
+        self.memory_category.addItems(["summary", "application", "routine", "instructions"])
         self.memory_key = QLineEdit()
         self.memory_content = QPlainTextEdit()
         self.memory_content.setMaximumHeight(130)
@@ -460,7 +542,33 @@ class MainWindow(QMainWindow):
         row.addWidget(self.delete_memory_button)
         row.addWidget(_button("Save memory", self.save_memory, kind="Primary"))
         layout.addLayout(row)
+        retention = QHBoxLayout()
+        self.memory_retention = QSpinBox()
+        self.memory_retention.setRange(1, 3650)
+        self.memory_retention.setValue(365)
+        self.memory_retention.setSuffix(" days")
+        retention.addWidget(_label("Delete older saved memories", "Muted"))
+        retention.addWidget(self.memory_retention)
+        retention.addWidget(_button("Review deletion", self.prune_saved_memories))
+        layout.addLayout(retention)
         return page
+
+    def prune_saved_memories(self):
+        days = self.memory_retention.value()
+        answer = QMessageBox.question(
+            self,
+            "Delete old saved memories",
+            f"Delete all explicit saved memories last updated more than {days} days ago? This cannot be undone. Export your data first if needed.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if answer == QMessageBox.StandardButton.Yes:
+
+            def deleted(count):
+                self._status(f"Deleted {count} old saved memories")
+                self.refresh()
+
+            self._run("memory-write", lambda: self.store.prune_memories(days), deleted)
 
     def _audit_page(self) -> QWidget:
         page = QWidget()
@@ -616,6 +724,19 @@ class MainWindow(QMainWindow):
         self.startup_check.setChecked(self.settings.start_with_windows)
         self.tray_check = QCheckBox("Open minimized to the system tray")
         self.tray_check.setChecked(self.settings.minimize_to_tray)
+        self.reduce_motion_check = QCheckBox("Reduce animations")
+        self.reduce_motion_check.setChecked(self.settings.reduce_motion)
+        self.on_top_check = QCheckBox("Keep compact assistant above other windows")
+        self.on_top_check.setChecked(self.settings.compact_always_on_top)
+        self.desktop_context_check = QCheckBox(
+            "Read foreground app and window title locally · no screenshots or uploads"
+        )
+        self.desktop_context_check.setChecked(self.settings.desktop_context_enabled)
+        self.speaking_style_choice = QComboBox()
+        self.speaking_style_choice.addItems(
+            ["concise", "professional", "conversational", "technical"]
+        )
+        self.speaking_style_choice.setCurrentText(self.settings.speaking_style)
         fields = [
             ("AI provider", self.provider_choice),
             ("Model", self.model_edit),
@@ -656,6 +777,10 @@ class MainWindow(QMainWindow):
             ("Notification interval (seconds)", self.proactive_interval_spin),
             ("Windows startup", self.startup_check),
             ("Background display", self.tray_check),
+            ("Motion", self.reduce_motion_check),
+            ("Compact window", self.on_top_check),
+            ("Desktop context permission", self.desktop_context_check),
+            ("Response style", self.speaking_style_choice),
         ]
         for title, field in fields:
             form.addRow(title, field)
@@ -707,9 +832,734 @@ class MainWindow(QMainWindow):
 
     def _navigate(self, index: int) -> None:
         self.pages.setCurrentIndex(index)
-        self.title_label.setText(("Assistant", "Activity", "Memory", "Audit", "Settings")[index])
+        self.title_label.setText(self.page_titles[index])
         for i, button in enumerate(self.nav):
             button.setChecked(i == index)
+        if index == 6:
+            self.refresh_system()
+
+    def _workflows_page(self) -> QWidget:
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        page = QWidget()
+        layout = QVBoxLayout(page)
+        layout.addWidget(_label("FOCUS & ROUTINES", "Muted"))
+        layout.addWidget(
+            _label(
+                "Inspect every step. Enable a routine, then run it explicitly. Each step keeps its normal permissions.",
+                "Muted",
+                True,
+            )
+        )
+        row = QHBoxLayout()
+        self.project_choice = QComboBox()
+        self.project_choice.addItem("Select a project", None)
+        row.addWidget(self.project_choice, 1)
+        row.addWidget(_button("Use context", self.select_project_context))
+        row.addWidget(_button("Development routine", self.create_development_routine))
+        layout.addLayout(row)
+        project = QHBoxLayout()
+        self.project_name = QLineEdit()
+        self.project_name.setPlaceholderText("Project name")
+        self.project_path = QLineEdit()
+        self.project_path.setPlaceholderText("Full folder path inside your permitted roots")
+        project.addWidget(self.project_name)
+        project.addWidget(self.project_path, 2)
+        project.addWidget(_button("Register", self.register_project))
+        project.addWidget(_button("Remove", self.delete_project))
+        layout.addLayout(project)
+        self.routine_choice = QComboBox()
+        self.routine_choice.addItem("New routine", None)
+        self.routine_choice.currentIndexChanged.connect(self._select_routine)
+        layout.addWidget(self.routine_choice)
+        row = QHBoxLayout()
+        self.routine_name = QLineEdit()
+        self.routine_name.setPlaceholderText("Routine name")
+        self.routine_name.textEdited.connect(self._mark_routine_dirty)
+        row.addWidget(self.routine_name, 1)
+        self.routine_enabled = QCheckBox("Enabled")
+        self.routine_enabled.clicked.connect(self.enable_routine)
+        row.addWidget(self.routine_enabled)
+        layout.addLayout(row)
+        step = QHBoxLayout()
+        self.routine_tool = QComboBox()
+        for title, name in (
+            ("Open application", "open_app"),
+            ("Open folder", "open_folder"),
+            ("List folder", "list_directory"),
+            ("Read text file", "read_file"),
+            ("Create folder · approval", "create_directory"),
+        ):
+            self.routine_tool.addItem(title, name)
+        self.routine_argument = QLineEdit()
+        self.routine_argument.setPlaceholderText(
+            "chrome / vscode / notepad / calculator, or full permitted path"
+        )
+        step.addWidget(self.routine_tool)
+        step.addWidget(self.routine_argument, 1)
+        step.addWidget(_button("Add step", self.add_routine_step))
+        layout.addLayout(step)
+        self.routine_preview = QListWidget()
+        self.routine_preview.setMinimumHeight(100)
+        self.routine_preview.setMaximumHeight(160)
+        layout.addWidget(self.routine_preview)
+        row = QHBoxLayout()
+        row.addWidget(_button("Remove step", self.remove_routine_step))
+        row.addWidget(_button("Save routine", self.save_routine))
+        row.addWidget(_button("Delete routine", self.delete_routine))
+        row.addStretch()
+        self.run_routine_button = _button("Run selected", self.run_routine, kind="Primary")
+        row.addWidget(self.run_routine_button)
+        layout.addLayout(row)
+        layout.addWidget(_label("WORKFLOW REPLAY · actual step evidence", "Muted"))
+        self.workflow_table = _table(["Routine", "State", "Steps"])
+        self.workflow_table.itemSelectionChanged.connect(self._select_workflow_run)
+        self.workflow_table.setMinimumHeight(130)
+        self.workflow_detail = QPlainTextEdit()
+        self.workflow_detail.setReadOnly(True)
+        self.workflow_detail.setMinimumHeight(130)
+        layout.addWidget(self.workflow_table)
+        layout.addWidget(self.workflow_detail)
+        row = QHBoxLayout()
+        row.addWidget(_button("Continue after approval", self.resume_workflow))
+        row.addWidget(_button("Cancel selected run", self.cancel_workflow))
+        row.addStretch()
+        row.addWidget(_button("Review pending approval", lambda: self._navigate(1)))
+        layout.addLayout(row)
+        scroll.setWidget(page)
+        return scroll
+
+    def _system_page(self) -> QWidget:
+        page = QWidget()
+        layout = QVBoxLayout(page)
+        layout.addWidget(_label("MEASURED AWARENESS", "Muted"))
+        layout.addWidget(
+            _label(
+                "Resource samples run off the interface thread. Desktop titles are read only with the separate permission in Settings.",
+                "Muted",
+                True,
+            )
+        )
+        self.system_summary = _label(
+            "Open this page to sample CPU, RAM and available GPU information.", "Status", True
+        )
+        layout.addWidget(self.system_summary)
+        self.system_details = QPlainTextEdit()
+        self.system_details.setReadOnly(True)
+        layout.addWidget(self.system_details, 1)
+        row = QHBoxLayout()
+        row.addWidget(_button("Refresh measurements", lambda: self.refresh_system(force=True)))
+        row.addWidget(_button("Check AI connection", self.run_health_check))
+        layout.addLayout(row)
+        return page
+
+    def _diagnostics_page(self) -> QWidget:
+        page = QWidget()
+        layout = QVBoxLayout(page)
+        layout.addWidget(_label("BUILD & STARTUP HEALTH", "Muted"))
+        layout.addWidget(self.build_health_label)
+        layout.addWidget(_button("Run startup health check", self.run_health_check))
+        self.ai_diagnostics = _label("No provider request measured in this window.", "Status", True)
+        layout.addWidget(self.ai_diagnostics)
+        layout.addWidget(
+            _label(
+                "Voice playback animation reflects the Windows speech engine state. This engine does not expose synthesized PCM amplitude; the display does not claim an audio waveform.",
+                "Muted",
+                True,
+            )
+        )
+        layout.addStretch()
+        return page
+
+    def _business_page(self) -> QWidget:
+        from .business import sample_summary
+
+        self._business = None
+        self._business_products = []
+        self._business_orders = []
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        page = QWidget()
+        layout = QVBoxLayout(page)
+        layout.addWidget(_label("BUSINESS · LOCAL BOOKKEEPING", "Muted"))
+        self.business_notice = _label(
+            "SAMPLE DATA · no private financial records loaded. Payments and fulfillment below are manual records, not external verification or delivery.",
+            "Status",
+            True,
+        )
+        layout.addWidget(self.business_notice)
+        self.business_summary = QPlainTextEdit()
+        self.business_summary.setReadOnly(True)
+        self.business_summary.setMaximumHeight(180)
+        self.business_summary.setPlainText(json.dumps(sample_summary(), indent=2))
+        layout.addWidget(self.business_summary)
+        layout.addWidget(_button("Use my local ledger", self.open_business_ledger))
+        self.business_editor = QWidget()
+        edit = QVBoxLayout(self.business_editor)
+        row = QHBoxLayout()
+        self.inventory_name = QLineEdit()
+        self.inventory_name.setPlaceholderText("Product name")
+        self.inventory_sku = QLineEdit()
+        self.inventory_sku.setPlaceholderText("SKU")
+        self.inventory_quantity = QSpinBox()
+        self.inventory_quantity.setRange(1, 100000)
+        self.inventory_cost = QLineEdit("0.00")
+        self.inventory_cost.setPlaceholderText("Purchase price per unit")
+        self.inventory_currency = QComboBox()
+        self.inventory_currency.addItems(["INR", "USD", "EUR", "GBP"])
+        for widget in (
+            self.inventory_name,
+            self.inventory_sku,
+            self.inventory_quantity,
+            self.inventory_cost,
+            self.inventory_currency,
+        ):
+            row.addWidget(widget)
+        edit.addWidget(
+            _label("Inventory · name, SKU, quantity, unit purchase price, currency", "Muted", True)
+        )
+        edit.addLayout(row)
+        edit.addWidget(_button("Add inventory record", self.add_business_inventory))
+        row = QHBoxLayout()
+        self.order_product = QComboBox()
+        self.order_quantity = QSpinBox()
+        self.order_quantity.setRange(1, 100000)
+        self.order_sale = QLineEdit("0.00")
+        self.order_cost = QLineEdit("0.00")
+        for widget in (self.order_product, self.order_quantity, self.order_sale, self.order_cost):
+            row.addWidget(widget)
+        edit.addWidget(
+            _label(
+                "Order · product, quantity, unit sale price, total transaction cost", "Muted", True
+            )
+        )
+        edit.addLayout(row)
+        edit.addWidget(_button("Record order", self.add_business_order))
+        self.business_table = _table(["Product", "Quantity", "State", "Payment provenance"])
+        self.business_table.setMinimumHeight(150)
+        edit.addWidget(self.business_table)
+        self.business_order_detail = QPlainTextEdit()
+        self.business_order_detail.setReadOnly(True)
+        self.business_order_detail.setMaximumHeight(140)
+        self.business_table.itemSelectionChanged.connect(self._select_business_order)
+        edit.addWidget(self.business_order_detail)
+        row = QHBoxLayout()
+        row.addWidget(
+            _button("Record payment received", lambda: self.business_operation("confirm_payment"))
+        )
+        row.addWidget(_button("Record fulfilled", lambda: self.business_operation("fulfill_order")))
+        row.addWidget(
+            _button("Cancel order record", lambda: self.business_operation("cancel_order"))
+        )
+        edit.addLayout(row)
+        self.business_editor.hide()
+        layout.addWidget(self.business_editor)
+        layout.addWidget(
+            _label(
+                "No messaging, purchases, transfers or item delivery. WhatsApp/LINE adapters only describe future official connections; no account is connected.",
+                "Muted",
+                True,
+            )
+        )
+        layout.addStretch()
+        scroll.setWidget(page)
+        return scroll
+
+    def open_business_ledger(self):
+        from .business import BusinessLedger
+
+        def opened(ledger):
+            self._business = ledger
+            self.business_notice.setText(
+                "LOCAL RECORDS · manually entered. No payment provider verification, messages, money transfers or inventory delivery."
+            )
+            self.business_editor.show()
+            self.refresh_business()
+
+        self._run("business", lambda: BusinessLedger(self.settings.data_dir), opened)
+
+    def refresh_business(self):
+        if not self._business:
+            return
+
+        def fetched(data):
+            row = self.business_table.currentRow()
+            selected = (
+                self._business_orders[row]["id"] if 0 <= row < len(self._business_orders) else None
+            )
+            selected_product = self.order_product.currentData()
+            self._business_products, self._business_orders = data["products"], data["orders"]
+            self.business_summary.setPlainText(
+                json.dumps(data["summary"], indent=2, ensure_ascii=False)
+            )
+            self.order_product.clear()
+            for product in self._business_products:
+                self.order_product.addItem(product["name"], product["id"])
+            selected_index = self.order_product.findData(selected_product)
+            if selected_index >= 0:
+                self.order_product.setCurrentIndex(selected_index)
+            self.business_table.blockSignals(True)
+            self.business_table.setRowCount(len(self._business_orders))
+            for row, order in enumerate(self._business_orders):
+                for col, value in enumerate(
+                    (
+                        order.get("product_name", order.get("product_id")),
+                        order["quantity"],
+                        order["status"],
+                        "Manual confirmation"
+                        if order.get("payment_confirmed_manually")
+                        else "Unconfirmed",
+                    )
+                ):
+                    self.business_table.setItem(row, col, QTableWidgetItem(str(value)))
+                if order["id"] == selected:
+                    self.business_table.selectRow(row)
+            self.business_table.blockSignals(False)
+            self._select_business_order()
+
+        self._run(
+            "business-refresh",
+            lambda: {
+                "products": self._business.inventory(),
+                "orders": self._business.orders(),
+                "summary": self._business.summary(),
+            },
+            fetched,
+        )
+
+    def add_business_inventory(self):
+        if self._business:
+            values = (
+                self.inventory_name.text(),
+                self.inventory_sku.text(),
+                self.inventory_quantity.value(),
+                self.inventory_cost.text(),
+                self.inventory_currency.currentText(),
+            )
+            self._run(
+                "business",
+                lambda: self._business.add_inventory(*values),
+                lambda _: self.refresh_business(),
+            )
+
+    def add_business_order(self):
+        if self._business and self.order_product.currentData():
+            values = (
+                self.order_product.currentData(),
+                self.order_quantity.value(),
+                self.order_sale.text(),
+                self.order_cost.text(),
+            )
+            self._run(
+                "business",
+                lambda: self._business.create_order(*values),
+                lambda _: self.refresh_business(),
+            )
+
+    def _select_business_order(self):
+        row = self.business_table.currentRow()
+        self.business_order_detail.setPlainText(
+            json.dumps(self._business_orders[row], indent=2, ensure_ascii=False)
+            if 0 <= row < len(self._business_orders)
+            else ""
+        )
+
+    def business_operation(self, operation):
+        row = self.business_table.currentRow()
+        if self._business and 0 <= row < len(self._business_orders):
+            identity = self._business_orders[row]["id"]
+            self._run(
+                "business",
+                lambda: getattr(self._business, operation)(identity),
+                lambda _: self.refresh_business(),
+            )
+
+    def command_palette(self) -> None:
+        dialog = QDialog(self)
+        dialog.setWindowTitle("JARVIS commands")
+        dialog.resize(450, 420)
+        layout = QVBoxLayout(dialog)
+        query = QLineEdit()
+        query.setPlaceholderText("Find a command…")
+        layout.addWidget(query)
+        commands = QListWidget()
+        actions = [
+            (title, lambda i=i: self._navigate(i)) for i, title in enumerate(self.page_titles)
+        ]
+        actions += [
+            ("Compact assistant", self.toggle_compact),
+            ("New conversation", self.new_conversation),
+            ("Pause microphone", lambda: self.voice_controller.stop()),
+            ("Mute", lambda: self.voice_controller.mute()),
+            ("Emergency stop", self.emergency_stop),
+        ]
+        for title, _ in actions:
+            commands.addItem(title)
+        layout.addWidget(commands)
+
+        def filter_items(text):
+            for i in range(commands.count()):
+                commands.item(i).setHidden(text.lower() not in commands.item(i).text().lower())
+
+        def execute(item):
+            row = commands.row(item)
+            dialog.accept()
+            actions[row][1]()
+
+        query.textChanged.connect(filter_items)
+        commands.itemActivated.connect(execute)
+        query.returnPressed.connect(
+            lambda: execute(
+                next(
+                    (
+                        commands.item(i)
+                        for i in range(commands.count())
+                        if not commands.item(i).isHidden()
+                    ),
+                    commands.item(0),
+                )
+            )
+        )
+        query.setFocus()
+        dialog.exec()
+
+    def _update_presence(self) -> None:
+        if self._closing:
+            return
+        controller = self.voice_controller
+        active_jobs = [
+            name
+            for name in self._jobs
+            if name not in {"refresh", "health", "awareness", "audio-devices"}
+        ]
+        pending = sum(task.get("state") == "awaiting_approval" for task in self._tasks)
+        self.mission_summary.setText(
+            f"Active · {', '.join(active_jobs) if active_jobs else 'none'}    Approvals · {pending}    Recorded tasks · {len(self._tasks)}"
+        )
+        value = controller.session.state.value
+        capture = bool(
+            controller.input and controller.input.running and controller.input.mode != "gated"
+        )
+        mapping = {
+            "WAKE_WORD_LISTENING": "wake",
+            "ACTIVATED": "activated",
+            "USER_SPEAKING": "listening",
+            "PROCESSING": "thinking",
+            "ASSISTANT_SPEAKING": "speaking",
+            "FOLLOW_UP_LISTENING": "listening",
+            "MUTED": "muted",
+            "ERROR": "error",
+        }
+        state = mapping.get(value, "idle")
+        if state in {"wake", "listening", "activated"} and not capture:
+            state = "idle"
+        if self._stopped:
+            state = "muted"
+        elif self._speech and self._speech.speaking:
+            state = "speaking"
+        elif any(key in self._jobs for key in ("action", "task-operation", "workflow-run")):
+            state = "tool"
+        elif (
+            "chat" in self._jobs or "record" in self._jobs and self._record_stage == "transcribing"
+        ):
+            state = "thinking"
+        elif self._record_stage == "recording":
+            state = "listening"
+        elif any(task.get("state") == "awaiting_approval" for task in self._tasks):
+            state = "approval"
+        self.core.set_state(state)
+        level = getattr(controller.input, "level", None) if capture else None
+        if level is None:
+            self.core.clear_level()
+        else:
+            self.core.set_level(level)
+        self.presence_caption.setText(self.voice_status.text())
+        self._update_overlay(state)
+        self.provider_ribbon.setText(
+            f"{self.settings.provider.upper()} · {self.settings.model or 'Choose a model'} · {'Cloud consent on' if self.settings.cloud_allowed else 'Local first'}"
+        )
+        context = self._context_snapshot
+        project = context.get("project")
+        self.context_ribbon.setText(
+            "CONTEXT · "
+            + (project.get("name", "Selected project") if project else "No project selected")
+        )
+
+    def refresh_system(self, force=False) -> None:
+        if self._closing or not force and self.pages.currentIndex() != 6:
+            return
+        from .awareness import collect_awareness
+
+        consent = self.settings.desktop_context_enabled
+
+        def measured(result):
+            self._awareness_data = result.as_dict()
+            # A revoked permission discards any in-flight foreground sample.
+            if consent and not self.settings.desktop_context_enabled:
+                self._awareness_data.pop("desktop", None)
+                self._awareness_data.pop("context", None)
+            system = self._awareness_data.get("system", {})
+            cpu = system.get("cpu_percent")
+            ram = system.get("memory_percent")
+            self.system_summary.setText(
+                f"CPU · {f'{cpu:.1f}%' if cpu is not None else 'Waiting for second sample'}    RAM · {f'{ram:.1f}%' if ram is not None else 'Unavailable'}\nMeasured: {system.get('sampled_at', 'Unavailable')}"
+            )
+            self.system_details.setPlainText(
+                json.dumps(self._awareness_data, indent=2, ensure_ascii=False)
+            )
+
+        self._run(
+            "awareness",
+            lambda: collect_awareness(
+                self._metrics_provider, self._context_provider, consent=consent
+            ),
+            measured,
+        )
+
+    def _routine_done(self, result=None):
+        if isinstance(result, dict) and "steps" in result and "state" in result:
+            self._status(
+                "Workflow "
+                + str(result["state"]).replace("_", " ")
+                + " · review steps and evidence"
+            )
+        self.refresh()
+
+    def _build_overlay(self):
+        from .ui_components import CoreWidget
+
+        self._overlay_dismissed = False
+        self.ambient_overlay = QFrame(
+            None,
+            Qt.WindowType.Tool
+            | Qt.WindowType.FramelessWindowHint
+            | Qt.WindowType.WindowStaysOnTopHint
+            | Qt.WindowType.WindowDoesNotAcceptFocus,
+        )
+        self.ambient_overlay.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating)
+        self.ambient_overlay.setObjectName("Panel")
+        self.ambient_overlay.setStyleSheet(self.styleSheet())
+        layout = QVBoxLayout(self.ambient_overlay)
+        self.overlay_core = CoreWidget()
+        self.overlay_core.set_reduce_motion(self.settings.reduce_motion)
+        self.overlay_core.setMaximumHeight(110)
+        layout.addWidget(self.overlay_core)
+        self.overlay_label = _label("", "Muted", True)
+        layout.addWidget(self.overlay_label)
+        row = QHBoxLayout()
+        row.addWidget(_button("Open JARVIS", self.show_from_tray))
+        row.addWidget(_button("Dismiss", self.dismiss_overlay))
+        layout.addLayout(row)
+        self.ambient_overlay.resize(320, 210)
+
+    def dismiss_overlay(self):
+        self._overlay_dismissed = True
+        self.ambient_overlay.hide()
+
+    def _update_overlay(self, state):
+        if state in {"idle", "wake", "muted", "error"}:
+            self._overlay_dismissed = False
+        active = state in {"activated", "listening", "thinking", "tool", "speaking", "approval"}
+        if self.isVisible() or not active or self._overlay_dismissed or self._closing:
+            self.ambient_overlay.hide()
+            return
+        self.overlay_core.set_state(state)
+        self.overlay_label.setText(self.voice_status.text())
+        screen = QApplication.primaryScreen()
+        if screen:
+            rect = screen.availableGeometry()
+            self.ambient_overlay.move(
+                rect.right() - self.ambient_overlay.width() - 24,
+                rect.bottom() - self.ambient_overlay.height() - 24,
+            )
+        self.ambient_overlay.show()
+
+    def register_project(self):
+        if self._transition_busy():
+            return
+        name, path = self.project_name.text().strip(), self.project_path.text().strip()
+        self._run(
+            "workflow-write",
+            lambda: self.workflows.register_project(name, path),
+            self._routine_done,
+        )
+
+    def delete_project(self):
+        if self._transition_busy():
+            return
+        identity = self.project_choice.currentData()
+        if identity:
+            self._run(
+                "workflow-write",
+                lambda: self.workflows.delete_project(identity),
+                self._routine_done,
+            )
+
+    def select_project_context(self):
+        if self._transition_busy():
+            return
+        identity = self.project_choice.currentData()
+        if identity:
+            if self.session_id is None:
+                import uuid
+
+                self.session_id = str(uuid.uuid4())
+
+            def selected(context):
+                self._context_snapshot = context
+                self._update_presence()
+                self._status("Project context selected · actions still require explicit requests")
+
+            self._run(
+                "context",
+                lambda: self.workflows.select_project(identity, self.session_id),
+                selected,
+            )
+
+    def create_development_routine(self):
+        if self._transition_busy():
+            return
+        identity = self.project_choice.currentData()
+        if identity:
+            project = next(item for item in self._projects if item["id"] == identity)
+            self._run(
+                "workflow-write",
+                lambda: self.workflows.create_development_routine(
+                    identity, "Development · " + project["name"]
+                ),
+                self._routine_done,
+            )
+        else:
+            self._status("Register or select a project first")
+
+    def _select_routine(self):
+        identity = self.routine_choice.currentData()
+        self._editing_routine_id = identity
+        self._routine_dirty = False
+        self.routine_enabled.setEnabled(bool(identity))
+        routine = next((item for item in self._routines if item["id"] == identity), None)
+        self._routine_steps = list(routine["steps"]) if routine else []
+        self.routine_name.setText(routine["name"] if routine else "")
+        self.routine_enabled.setChecked(bool(routine and routine["enabled"]))
+        self.run_routine_button.setEnabled(bool(routine and routine["enabled"]))
+        self._show_routine_steps()
+
+    def _show_routine_steps(self):
+        self.routine_preview.clear()
+        for i, step in enumerate(self._routine_steps, 1):
+            self.routine_preview.addItem(
+                f"{i}. {step['tool'].replace('_', ' ')} · {json.dumps(step['arguments'], ensure_ascii=False)}"
+            )
+
+    def _mark_routine_dirty(self):
+        self._routine_dirty = True
+        self.run_routine_button.setEnabled(False)
+        self.routine_enabled.setEnabled(False)
+        self._status("Unsaved routine changes · save, inspect and enable before running")
+
+    def add_routine_step(self):
+        tool = self.routine_tool.currentData()
+        argument = self.routine_argument.text().strip()
+        if argument:
+            self._routine_steps.append(
+                {"tool": tool, "arguments": {"app" if tool == "open_app" else "path": argument}}
+            )
+            self._show_routine_steps()
+            self._mark_routine_dirty()
+            self._status("Unsaved changes · save, inspect and enable before running")
+
+    def remove_routine_step(self):
+        index = self.routine_preview.currentRow()
+        if 0 <= index < len(self._routine_steps):
+            self._routine_steps.pop(index)
+            self._show_routine_steps()
+            self._mark_routine_dirty()
+
+    def save_routine(self):
+        if self._transition_busy():
+            return
+        identity, name, steps = (
+            self.routine_choice.currentData(),
+            self.routine_name.text().strip(),
+            list(self._routine_steps),
+        )
+
+        def action():
+            return (
+                self.workflows.update_routine(identity, name=name, steps=steps)
+                if identity
+                else self.workflows.create_routine(name, steps)
+            )
+
+        def saved(result):
+            self._routine_dirty = False
+            self._routine_done(result)
+
+        self._run("workflow-write", action, saved)
+
+    def enable_routine(self):
+        if self._transition_busy():
+            return
+        identity, enabled = self.routine_choice.currentData(), self.routine_enabled.isChecked()
+        if identity and not self._routine_dirty:
+            self._run(
+                "workflow-write",
+                lambda: self.workflows.set_enabled(identity, enabled),
+                self._routine_done,
+            )
+        else:
+            self.routine_enabled.setChecked(False)
+
+    def delete_routine(self):
+        if self._transition_busy():
+            return
+        identity = self.routine_choice.currentData()
+        if identity:
+            self._run(
+                "workflow-write",
+                lambda: self.workflows.delete_routine(identity),
+                self._routine_done,
+            )
+
+    def run_routine(self):
+        identity = self.routine_choice.currentData()
+        if (
+            identity
+            and not self._routine_dirty
+            and not self._stopped
+            and not self._transition_busy()
+        ):
+            self._run(
+                "workflow-run",
+                lambda: self.workflows.start(identity, session_id=self.session_id or "default"),
+                self._routine_done,
+            )
+
+    def _selected_workflow(self):
+        row = self.workflow_table.currentRow()
+        return self._workflow_runs[row] if 0 <= row < len(self._workflow_runs) else None
+
+    def _select_workflow_run(self):
+        run = self._selected_workflow()
+        self.workflow_detail.setPlainText(
+            json.dumps(run, indent=2, ensure_ascii=False)
+            if run
+            else "Select a run to inspect its actual steps and results."
+        )
+
+    def resume_workflow(self):
+        if self._transition_busy():
+            return
+        run = self._selected_workflow()
+        if run and not self._stopped:
+            self._run("workflow-run", lambda: self.workflows.resume(run["id"]), self._routine_done)
+
+    def cancel_workflow(self):
+        run = self._selected_workflow()
+        if run:
+            self._run(
+                "workflow-cancel", lambda: self.workflows.cancel(run["id"]), self._routine_done
+            )
 
     def _status(self, text: str) -> None:
         self.status_label.setText(text)
@@ -773,6 +1623,8 @@ class MainWindow(QMainWindow):
         cursor.insertText(str(content) + "\n\n", body)
         self.conversation.setTextCursor(cursor)
         self.conversation.ensureCursorVisible()
+        if role == "JARVIS" and hasattr(self, "compact_response"):
+            self.compact_response.setText(str(content)[:240])
 
     def _run(
         self,
@@ -814,6 +1666,8 @@ class MainWindow(QMainWindow):
             self.save_settings_button.setEnabled(not self._closing)
         if self._closing:
             self._poll_shutdown()
+        elif hasattr(self, "voice_controller"):
+            self._update_presence()
 
     def send_message(self) -> bool:
         text = self.composer.toPlainText().strip()
@@ -822,7 +1676,7 @@ class MainWindow(QMainWindow):
         if self._transition_busy():
             return False
         if self._stopped:
-            self._status("Emergency stop is active. Resume in Activity before sending.")
+            self._status("Emergency stop is active. Resume in Mission Control before sending.")
             return False
         self.composer.clear()
         controller = self.voice_controller
@@ -840,10 +1694,11 @@ class MainWindow(QMainWindow):
                 controller.session.processing()
         self._append_message("YOU", text)
         self.send_button.setEnabled(False)
-        self._status(f"Waiting for {self.settings.provider} · Interrupt cancels this request")
+        self._status("Processing your request · Interrupt cancels at the next safe boundary")
         cancel = threading.Event()
         self._chat_cancel = cancel
         session = self.session_id
+        requested_at = time.monotonic()
 
         def succeeded(result: dict[str, Any]) -> None:
             self.session_id = result.get("session_id", self.session_id)
@@ -851,6 +1706,13 @@ class MainWindow(QMainWindow):
                 self._status("Request interrupted. A provider may finish its in-flight request.")
                 return
             answer = str(result.get("text", ""))
+            self._last_reply = result
+            self._last_latency = time.monotonic() - requested_at
+            self.ai_diagnostics.setText(
+                f"Last reply · {result.get('provider', 'unknown')} / {result.get('model', '')}\n"
+                f"Elapsed: {self._last_latency:.2f} seconds\nReported token usage: {json.dumps(result.get('usage', {}))}\n"
+                "API cost: unavailable (no pricing estimate configured)"
+            )
             self._append_message("JARVIS", answer)
             self._status(
                 f"Reply from {result.get('provider', self.settings.provider)} · {result.get('model', self.settings.model)}"
@@ -881,6 +1743,7 @@ class MainWindow(QMainWindow):
 
     def _reset_conversation(self) -> None:
         self.session_id = None
+        self._context_snapshot = {}
         self.conversation.clear()
         self._status("New conversation · microphone off")
 
@@ -893,6 +1756,8 @@ class MainWindow(QMainWindow):
             self._speech.stop()
         if hasattr(self, "voice_controller"):
             self.voice_controller.interrupted()
+        if not self._closing:
+            self._run("workflow-interrupt", self.workflows.emergency_stop)
         self._status("Interrupted · active requests stop at the next safe boundary")
 
     def _tool_changed(self) -> None:
@@ -923,7 +1788,9 @@ class MainWindow(QMainWindow):
             self._last_task_id = result["id"]
             self._live_task_results[result["id"]] = result
         self.task_detail.setPlainText(json.dumps(result, indent=2, ensure_ascii=False, default=str))
-        self._status(f"Action {result.get('state', 'updated')} · review Activity for evidence")
+        self._status(
+            f"Action {result.get('state', 'updated')} · review Mission Control for evidence"
+        )
         self.refresh()
         self.voice_controller.task_event(result)
 
@@ -959,9 +1826,13 @@ class MainWindow(QMainWindow):
         if not task:
             return
         task_id = task["id"]
-        self._run(
-            "task-operation", lambda: getattr(self.engine, operation)(task_id), self._task_result
-        )
+
+        def operate():
+            result = getattr(self.engine, operation)(task_id)
+            self.workflows.resume_for_task(task_id)
+            return result
+
+        self._run("task-operation", operate, self._task_result)
 
     def emergency_stop(self) -> None:
         self._stopped = True
@@ -970,7 +1841,12 @@ class MainWindow(QMainWindow):
         self._select_task()
         self._status("EMERGENCY STOP · cancelling pending actions and voice")
         stop = getattr(self.service, "emergency_stop", self.engine.emergency_stop)
-        self._run("emergency-stop", stop, lambda _: self.refresh())
+
+        def halt():
+            stop()
+            self.workflows.emergency_stop()
+
+        self._run("emergency-stop", halt, lambda _: self.refresh())
 
     def resume(self) -> None:
         if "emergency-stop" in self._jobs:
@@ -988,6 +1864,7 @@ class MainWindow(QMainWindow):
 
     def refresh(self) -> None:
         query = self.memory_search.text().strip()
+        session = self.session_id or "default"
 
         def fetch() -> dict[str, Any]:
             return {
@@ -995,6 +1872,10 @@ class MainWindow(QMainWindow):
                 "memories": self.store.memories(query),
                 "audits": self.store.audits(limit=100),
                 "sessions": self.store.sessions(),
+                "routines": self.workflows.routines(),
+                "workflow_runs": self.workflows.runs(),
+                "projects": self.workflows.projects(),
+                "context": self.workflows.session_context(session),
             }
 
         self._run("refresh", fetch, self._show_data)
@@ -1044,6 +1925,39 @@ class MainWindow(QMainWindow):
             item = self.session_list.item(self.session_list.count() - 1)
             item.setData(Qt.ItemDataRole.UserRole, session_id)
         self._select_task()
+        self._show_workflow_data(data)
+
+    def _show_workflow_data(self, data):
+        self._context_snapshot = data.get("context", {})
+        selected_project = self.project_choice.currentData()
+        selected_routine = self.routine_choice.currentData()
+        previous_run = self._selected_workflow()
+        selected_id = previous_run.get("id") if previous_run else None
+        self._projects, self._routines = data.get("projects", []), data.get("routines", [])
+        self._workflow_runs = data.get("workflow_runs", [])
+        for choice, title, records, selected in (
+            (self.project_choice, "Select a project", self._projects, selected_project),
+            (self.routine_choice, "New routine", self._routines, selected_routine),
+        ):
+            choice.blockSignals(True)
+            choice.clear()
+            choice.addItem(title, None)
+            for item in records:
+                choice.addItem(item["name"], item["id"])
+            index = choice.findData(selected)
+            choice.setCurrentIndex(max(index, 0))
+            choice.blockSignals(False)
+        if not self._routine_dirty or self._editing_routine_id != self.routine_choice.currentData():
+            self._select_routine()
+        self.workflow_table.setRowCount(len(self._workflow_runs))
+        for row, run in enumerate(self._workflow_runs):
+            for column, value in enumerate(
+                (run["name"], run["state"], f"{run.get('step_index', 0)} / {len(run['steps'])}")
+            ):
+                self.workflow_table.setItem(row, column, QTableWidgetItem(str(value)))
+            if run["id"] == selected_id:
+                self.workflow_table.selectRow(row)
+        self._select_workflow_run()
 
     def _select_memory(self) -> None:
         row = self.memory_table.currentRow()
@@ -1108,8 +2022,12 @@ class MainWindow(QMainWindow):
             return
 
         def export() -> None:
+            snapshot = self.store.export()
+            snapshot["workflows"] = self.workflows.export()
+            if self._business:
+                snapshot["business"] = self._business.export()
             Path(filename).write_text(
-                json.dumps(self.store.export(), indent=2, ensure_ascii=False, default=str),
+                json.dumps(snapshot, indent=2, ensure_ascii=False, default=str),
                 encoding="utf-8",
             )
 
@@ -1214,6 +2132,10 @@ class MainWindow(QMainWindow):
             proactive_interval_seconds=self.proactive_interval_spin.value(),
             start_with_windows=self.startup_check.isChecked(),
             minimize_to_tray=self.tray_check.isChecked(),
+            reduce_motion=self.reduce_motion_check.isChecked(),
+            compact_always_on_top=self.on_top_check.isChecked(),
+            desktop_context_enabled=self.desktop_context_check.isChecked(),
+            speaking_style=self.speaking_style_choice.currentText(),
         )
         try:
             candidate = Settings.model_validate(values)
@@ -1268,6 +2190,11 @@ class MainWindow(QMainWindow):
                     self._speech._tts.deleteLater()
                 self._speech = None
             self._update_privacy_label()
+            self.core.set_reduce_motion(self.settings.reduce_motion)
+            self.overlay_core.set_reduce_motion(self.settings.reduce_motion)
+            if not self.settings.desktop_context_enabled:
+                self._awareness_data = {}
+                self.system_details.clear()
             self._status("Settings saved · privacy and permission folders updated")
             from .conversation import ProactivePolicy, VoiceSession
 
@@ -1515,13 +2442,29 @@ class MainWindow(QMainWindow):
             self.expand_button.show()
             self._navigate(0)
             self.setMinimumSize(430, 380)
-            self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, True)
-            self.resize(500, 570)
+            self.setWindowFlag(
+                Qt.WindowType.WindowStaysOnTopHint, self.settings.compact_always_on_top
+            )
+            self.presence_details.hide()
+            self.conversation.hide()
+            self.compact_response.show()
+            self.composer.setFixedHeight(56)
+            self.core.setMaximumHeight(110)
+            self.speak_check.hide()
+            self.listen_button.hide()
+            self.resize(460, 470)
         else:
             self.sidebar.show()
             self.expand_button.hide()
             self.setMinimumSize(760, 560)
             self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, False)
+            self.presence_details.show()
+            self.conversation.show()
+            self.compact_response.hide()
+            self.composer.setFixedHeight(96)
+            self.core.setMaximumHeight(220)
+            self.speak_check.show()
+            self.listen_button.show()
             if self._normal_geometry:
                 self.restoreGeometry(self._normal_geometry)
         self.show()
@@ -1583,6 +2526,9 @@ class MainWindow(QMainWindow):
         stop = getattr(self.service, "emergency_stop", self.engine.emergency_stop)
         self._run("shutdown-stop", stop)
         self._closing = True
+        self.ambient_overlay.hide()
+        self._presence_timer.stop()
+        self._system_timer.stop()
         # The pooled runnables retain their own signals and never destroy a live QThread.
         self.centralWidget().setEnabled(False)
         self._close_deadline = time.monotonic() + max(5.0, self.settings.request_timeout + 5)
@@ -1600,6 +2546,8 @@ class MainWindow(QMainWindow):
             # instead of hanging close or tearing down objects used by a worker.
             self._shutdown_timer.stop()
             self._closing = False
+            self._presence_timer.start()
+            self._system_timer.start()
             self.centralWidget().setEnabled(True)
             self.send_button.setEnabled("chat" not in self._jobs)
             self.mic_button.setEnabled("record" not in self._jobs)

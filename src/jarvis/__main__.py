@@ -86,6 +86,11 @@ def main(argv=None):
     )
     parser.add_argument("--chat", help="Send one real model message and print the actual result")
     parser.add_argument(
+        "--verify-phase3",
+        action="store_true",
+        help="Exercise the native command center with isolated generated data; no microphone",
+    )
+    parser.add_argument(
         "--verify-voice-update",
         action="store_true",
         help="Explicit synthetic voice desktop verification, local AI and speech playback; no microphone",
@@ -120,6 +125,21 @@ def main(argv=None):
             print(f"Offline speech model ready: {download_speech_model(settings)}")
             return 0
         configure_logging(settings.data_dir)
+        if args.verify_phase3:
+            import runpy
+
+            diagnostic_dir = (
+                Path(__file__).parent
+                if getattr(sys, "frozen", False)
+                else Path(__file__).resolve().parents[2] / "scripts"
+            )
+            previous_args = sys.argv
+            sys.argv = ["verify_phase3", "--data-dir", str(settings.data_dir)]
+            try:
+                runpy.run_path(str(diagnostic_dir / "verify_phase3.py"), run_name="__main__")
+            finally:
+                sys.argv = previous_args
+            return 0
         if args.verify_voice_update:
             import runpy
 

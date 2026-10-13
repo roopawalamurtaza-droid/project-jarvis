@@ -23,5 +23,9 @@
   "voice_interruption": false,
   "start_with_windows": false,
   "minimize_to_tray": false,
-  "pronunciation_replacements": {}
+  "pronunciation_replacements": {},
+  "reduce_motion": false,
+  "compact_always_on_top": false,
+  "desktop_context_enabled": false,
+  "speaking_style": "concise"
 }

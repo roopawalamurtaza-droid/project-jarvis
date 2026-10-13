@@ -1,5 +1,15 @@
 # Roadmap and acceptance gates
 
+## Current Phase3 release:0.3.0
+
+The user's Phase3 ULTRON protocol supersedes the original table below. Native
+design/core/compact UI, context/routine foundation, Mission Control/approvals/
+memory/system diagnostics and local bookkeeping are implemented with443 passing
+tests. Final Windows acceptance is in NEXT_STEPS.md. Autonomous planning,
+streaming, durable schedules, screenshots/clipboard, research/coding execution
+and external business integrations remain incomplete. See PHASE3_RELEASE.md.
+Original numbered plans below are historical, not completed functionality.
+
 | Phase | Scope | Gate |
 |---|---|---|
 | 0 | Environment, contracts, repository | Actual Windows/runtime capabilities inspected; boundaries documented |

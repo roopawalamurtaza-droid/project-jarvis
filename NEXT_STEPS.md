@@ -1,4 +1,18 @@
-# Verified repair and transfer state — 13 October 2026
+# Current development and transfer state — 14October2026
+
+## Phase3 command center — 0.3.0
+
+Current branch: **codex/phase3-ultron**. Read PHASE3_RELEASE.md. Baseline295
+passed; integrated443 passed in91.94s. Real native rendering at100/150/200% Qt
+scaling, local AI and two-step approved filesystem workflow passed. Final frozen
+identity and launch/push record will be appended after packaging verification.
+The broader protocol remains incomplete as explicitly documented.
+
+Next: packaged live-microphone acceptance, compact/background/reduced-motion
+review, long-idle measurements and fresh-Windows distribution. Preserve local
+data, keys, model isolation, mic consent and bounded execution.
+
+## Historical Phase2 repair/transfer record
 
 Continue this checkout. Read PROJECT_HANDOFF.md and UPDATE_REPAIR.md first.
 

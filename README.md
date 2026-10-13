@@ -1,5 +1,17 @@
 # Project JARVIS
 
+**Current development release:0.3.0 · Phase3 command center.** Continue branch
+`codex/phase3-ultron` in the private repository. New native core, compact/background
+modes, Mission Control, inspected routines, project context, Memory Explorer,
+Windows measurements and an opt-in local business ledger extend repaired0.2.1.
+See [Phase3 delivery and limits](PHASE3_RELEASE.md) and NEXT_STEPS.md for actual
+build/verification/push records. Diagnostics identifies the running build.
+
+Routines start disabled: inspect, enable, then Run. Ctrl+K opens commands.
+Reduced motion, compact always-on-top, response styles and foreground-title
+permission are in Settings. Business starts with labelled sample data; payments
+are manual bookkeeping. The older repair record below is engineering history.
+
 A native Windows assistant with real local AI conversation, opt-in hands-free voice,
 Windows speech, local memory, and narrowly scoped desktop actions.
 

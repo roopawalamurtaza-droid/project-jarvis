@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import sqlite3
 import threading
 import uuid
@@ -100,8 +101,20 @@ class Store:
             ]
 
     def save_memory(self, category, key, content, source="user"):
-        if category not in {"preferences", "project", "business", "task", "knowledge"}:
-            raise ValueError("Choose preferences, project, business, task or knowledge")
+        if not isinstance(source, str) or not source.strip() or len(source) > 160:
+            raise ValueError("Memory source must be short nonempty text")
+        if category not in {
+            "preferences",
+            "project",
+            "business",
+            "task",
+            "knowledge",
+            "summary",
+            "application",
+            "routine",
+            "instructions",
+        }:
+            raise ValueError("Choose a supported memory category")
         if not key.strip() or len(key) > 200 or not content.strip() or len(content) > 20000:
             raise ValueError("Memory needs a key (up to 200 characters) and content (up to 20000)")
         with self._lock, self._connect() as db:
@@ -126,6 +139,54 @@ class Store:
     def delete_memory(self, identity):
         with self._lock, self._connect() as db:
             db.execute("DELETE FROM memories WHERE id=?", (identity,))
+
+    def relevant_memories(self, query="", limit=10):
+        """Rank explicit references by token matches, then recency; no invented relationships."""
+        tokens = set(re.findall(r"\w{3,}", str(query).lower()[:500]))
+        ignored = {"the", "what", "that", "this", "please", "jarvis", "about", "with", "remember"}
+        tokens -= ignored
+        records = []
+        if tokens:
+            selected = sorted(tokens)[:20]
+            clauses = " OR ".join("lower(key) LIKE ? OR lower(content) LIKE ?" for _ in selected)
+            parameters = [
+                pattern
+                for token in selected
+                for pattern in ("%" + token.replace("%", "").replace("_", "") + "%",) * 2
+            ]
+            with self._lock, self._connect() as db:
+                records = [
+                    dict(row)
+                    for row in db.execute(
+                        "SELECT * FROM memories WHERE "
+                        + clauses
+                        + " ORDER BY updated_at DESC LIMIT 500",
+                        parameters,
+                    )
+                ]
+        if not records:
+            records = self.memories()
+
+        def score(item):
+            key = set(re.findall(r"\w+", item["key"].lower()))
+            body = set(re.findall(r"\w+", item["content"].lower()))
+            return len(tokens & key) * 3 + len(tokens & body)
+
+        # Stable ordering keeps the existing recent-first order for equal relevance.
+        records.sort(key=score, reverse=True)
+        if tokens and any(score(item) for item in records):
+            records = [item for item in records if score(item)]
+        return records[: min(max(int(limit), 1), 30)]
+
+    def prune_memories(self, days):
+        """Explicit user-triggered retention; normal startup never deletes saved memory."""
+        days = int(days)
+        if not 1 <= days <= 3650:
+            raise ValueError("Choose 1 to 3650 days")
+        cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+        with self._lock, self._connect() as db:
+            result = db.execute("DELETE FROM memories WHERE updated_at < ?", (cutoff,))
+            return result.rowcount
 
     def put_task(self, task):
         record = dict(task)

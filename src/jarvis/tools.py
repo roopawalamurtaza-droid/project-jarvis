@@ -150,7 +150,8 @@ class ToolRegistry:
             return self._launch([str(executable), str(path)], "Explorer")
         raise ValueError("Unknown tool")
 
-    def _open_app(self, app):
+    def application_path(self, app):
+        """Resolve an allowlisted installed application without launching it."""
         if os.name != "nt":
             raise RuntimeError("Desktop application launch requires Windows")
         system = Path(os.environ.get("SystemRoot", r"C:\Windows")) / "System32"
@@ -169,6 +170,10 @@ class ToolRegistry:
             ],
         }[app]
         executable = next((candidate for candidate in candidates if candidate.is_file()), None)
+        return executable
+
+    def _open_app(self, app):
+        executable = self.application_path(app)
         if executable is None:
             raise RuntimeError("Requested application is not installed at a supported location")
         return self._launch([str(executable)], app)
