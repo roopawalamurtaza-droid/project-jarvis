@@ -1,5 +1,11 @@
 # Verification record — 2026-10-14
 
+Final Phase 4 source suite: **823 passed in 137.20s**; Ruff and all 73 formatting
+checks passed. A reproducible Qt overlay/worker lifetime issue found during
+repeat runs was repaired and covered by forced background-GC regressions.
+Frozen GUI, Windows action and memory/workflow checks passed separately. Read
+NEXT_STEPS.md for exact runtime identity, voice, human acceptance and limitations.
+
 ## Phase 4 action-engine checkpoint
 
 Current source version is 0.4.0 on `codex/phase4-actions`. The retained Phase 3

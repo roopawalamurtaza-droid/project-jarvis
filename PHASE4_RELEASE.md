@@ -209,6 +209,10 @@ local measurement, not a performance guarantee or launch/window acceptance.
 The earlier 0.3.0 human voice acceptance is historical. Current 0.4.0 app discovery,
 visible-window launches/focus, encoded search/browser launch, cancellation,
 frozen packaging and live voice checks must be recorded against the actual build.
+The final 0.4.0 package passed GUI startup, actual Windows actions, preserved
+memory/workflows and generated-speech voice/action/shutdown checks. Its normal
+window was launched and the preserved settings verified. Human acceptance and
+the exact runtime/transfer identity are recorded separately in NEXT_STEPS.md.
 Cloud function-call parsing uses mocked transport tests unless a separate live
 credential-based result is explicitly recorded. No synthetic speech fixture or
 mocked browser establishes human microphone reliability or page navigation.

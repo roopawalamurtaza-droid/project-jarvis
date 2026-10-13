@@ -1,6 +1,6 @@
 # Project JARVIS
 
-**Current source development release: 0.4.0 · Phase 4 Windows actions.** Continue
+**Current development release: 0.4.0 · Phase 4 Windows actions.** Continue
 branch `codex/phase4-actions` in the private repository. Explicit voice and text
 commands now share a local application library, launch/focus executor, website
 and search actions, and verified action receipts. The existing Phase 3 command

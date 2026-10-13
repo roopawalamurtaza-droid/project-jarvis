@@ -1,5 +1,11 @@
 # Project JARVIS engineering handoff
 
+The final 0.4.0 source suite passed **823 tests**. The packaged GUI, actual
+Windows app/browser actions, memory/workflows and generated-speech voice checks
+passed; the replacement window was launched on this PC. NEXT_STEPS.md records
+the runtime/source identity and whether current human voice/page acceptance is
+confirmed. The broader autonomy protocol remains incomplete.
+
 ## Current Phase 4 checkpoint — 14 October 2026
 
 Continue **codex/phase4-actions**, source version **0.4.0**, in the same private

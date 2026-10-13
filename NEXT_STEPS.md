@@ -45,8 +45,62 @@ Verified during source integration:
 
 The old JARVIS 0.3.0 window was closed gracefully for replacement and speech
 diagnostics; its complete folder is preserved at `transfer/phase3-build-0.3.0`.
-Other user apps were not closed. Final build identity, voice checks,
-launch, human acceptance, push and transfer records follow after verification.
+Other user apps were not closed. Final build identity and transfer evidence:
+
+- Runtime **0.4.0**, clean source commit
+  `bb766495eccc1701ece3932a3ba8dc02bd50bcba`, `codex/phase4-actions`.
+  This source was successfully pushed and its remote identifier verified.
+- Embedded UTC build date `2026-10-13T23:00:53+00:00` (14 October in India).
+  Executable `C:\Jarvis\dist\JARVIS\JARVIS.exe`, 14,727,047 bytes,
+  timestamp `2026-10-13T23:02:19+00:00`. SHA256
+  `cd97401b88bb4f047aa303388bdb820bfd0e010892ef5264a32066ef3a8a5cfb`.
+  All **30** embedded source hashes match current runtime files. Later
+  documentation-only commits do not change this tested executable.
+- Final frozen GUI smoke, actual Phase 4 Windows action check and Phase 3
+  memory/workflow regression all exit **0**. Fifteen action requests exercised
+  visible-window launch evidence, known website/browser searches, independent
+  partial failure, missing-app errors and actual OS focus refusal. No microphone
+  or cloud was used in these diagnostics. The frozen action check measured a
+  0.062s maximum GUI event gap in one run; it is not a performance guarantee.
+- Full Windows archive `transfer/JARVIS-Windows-0.4.0.zip`: **154,593,744 bytes**,
+  **1,113 files** individually hash-verified, with BUILD_MANIFEST.json and
+  INSTALL.txt. SHA256
+  `1c9cd3c1a6a7daf6ae62d929c518253d3647e7aeafa3f6907a04173da0f3b90c`.
+  This unsigned binary archive is staged locally, not a GitHub release.
+- Settings hash, memory count and credential-file presence/hash match the
+  pre-update snapshot. Existing microphone/speech opt-ins, AI provider and
+  allowed folders are retained. Downloads was not added to permitted roots.
+- Use `Start JARVIS.cmd`, which still selects this exact executable and `.local`.
+  Models, user configuration, aliases, credentials, logs and databases remain
+  excluded from Git and transferable build/source archives. Never zip the whole
+  `transfer` directory, which also contains private local backups.
+
+- Final frozen generated-speech voice/action check and clean shutdown exit **0**:
+  real Qt, WebRTC VAD, offline base.en, local qwen3:8b and Windows speech handled
+  unrelated speech recovery, wake/time, same-session AI, Notepad/Chrome/VS Code,
+  combined Chrome + encoded Python tutorial search, standalone wake, compound
+  sleep and mute closure. No microphone was opened by this diagnostic; no page
+  was inspected or claimed loaded by its browser adapter.
+- The normal replacement application **was launched and verified** on this PC:
+  PID 41768, title `JARVIS · Command Center`, nonzero window handle, responsive,
+  exact process path `C:\Jarvis\dist\JARVIS\JARVIS.exe` with `.local` data.
+  Saved settings, memory count and credential file still matched after launch.
+- Human 0.4.0 acceptance is requested and pending: wake/Notepad → combined
+  Chrome/search → VS Code follow-up → sleep. The requested check includes actual
+  browser results, which the launcher cannot inspect. Do not substitute prior
+  0.3.0 live acceptance or generated speech for this human result.
+- Current source/history handoff is `transfer/PROJECT_JARVIS_HANDOFF.zip`; its
+  MANIFEST and adjacent SHA256 identify the final documentation checkpoint.
+  The bundle preserves all Git branches/history and is checked by restoration.
+  Source/docs are pushed privately; full Windows distribution remains local.
+
+Remaining: wider room/noise/accent and long-idle tests, fresh-machine/signed
+distribution, reliable page observation and scoped page controls. Arbitrary
+scripts, message/payment submission, destructive actions, unrestricted browsing,
+media controls and filesystem-wide access remain unimplemented. Windows can
+refuse focus, and native OS activation cannot be hard-aborted mid-call; stop
+prevents subsequent actions at the next safe boundary.
+
 The historical Phase 3 and Phase 2 records below remain distinct.
 
 ## Phase 3 command center — 0.3.0
