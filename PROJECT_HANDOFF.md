@@ -1,23 +1,25 @@
 # Project JARVIS engineering handoff
 
-## Current Phase3 checkpoint — 14October2026
+## Current Phase 3 checkpoint — 14 October 2026
 
-Continue **codex/phase3-ultron**, version0.3.0, in the same private repository.
+Continue **codex/phase3-ultron**, version 0.3.0, in the same private repository.
 PHASE3_RELEASE.md is the current feature/architecture/commands/security/testing
 contract. NEXT_STEPS.md has final packaging/push/transfer evidence. Main and
 feature/handsfree-voice preserve earlier milestones; default branch is unchanged.
 
-Baseline295 and integrated443 tests passed. Native core/full/compact/background,
+Baseline 295 and integrated 444 tests passed. Native core/full/compact/background,
 task/approval activity, structured context, multi-step routines, memory explorer,
 measured resources and separate opt-in business records are implemented. No new
 dependency; workflow tables are additive. Preserve original voice/privacy/path/
 provider limits, sanitized package PATH, WebRTC hook and generation cancellation.
 Live `.local` data/keys/models must stay out of Git/archives. Read current
 Diagnostics then test the actual microphone; do not infer hardware success.
-Outstanding capabilities are explicit in PHASE3_RELEASE.md. The following0.2.1
-handoff is retained as historical foundational context.
+Outstanding capabilities are explicit in PHASE3_RELEASE.md. Phase 2 failure and
+testing records below are historical; shared architecture and continuation
+commands describe the current checkout.
 
-Prepared 13 October 2026. Continue this repository; do not start a new scaffold.
+The original Phase 2 handoff was prepared 13 October 2026. Continue this repository;
+do not start a new scaffold.
 Read NEXT_STEPS.md for the final verification/transfer record and UPDATE_REPAIR.md
 for the user's report of an old executable appearing unchanged.
 The subsequent completed-recognition bug and 0.2.1 repair are documented in
@@ -29,20 +31,24 @@ RECOGNITION_REPAIR.md. Use the latest record in NEXT_STEPS.md, not the earlier
 A Windows desktop companion with local-first conversation, explicit memory,
 opt-in hands-free voice, and narrow permission-controlled actions. Calm concise
 wording, honest execution evidence and user control take precedence over fictional
-capability claims. Phase 1 works; Phase 2 voice is implemented, packaged and tested.
-The user confirmed the repaired live hands-free demonstration on this Windows PC.
+capability claims. The current milestone is the Phase 3 native command center,
+inspected workflows, local context/memory controls and measured status, extending
+the repaired voice system. The user confirmed Phase 2 live hands-free behavior
+on this PC; Phase 3 hardware acceptance belongs in its separate final record.
 Broader acoustic accuracy and fresh-machine distribution acceptance remain open.
 
 ## Repository and actual state
 
 Private repository: https://github.com/roopawalamurtaza-droid/project-jarvis
 
-Working branch: `feature/handsfree-voice`. `main` preserves the Phase 1 checkpoint
+Working branch: `codex/phase3-ultron`. `feature/handsfree-voice` preserves repaired
+Phase 2, and `main` preserves the Phase 1 checkpoint
 `b3f3c37`. The repository was created private during this handoff. No secrets or
 live user data belong in it. The runtime build commit is recorded in packaged
 `build_info.json`; the final handoff-only commit is Git HEAD and export MANIFEST.json.
-Runtime sources are unchanged by that documentation checkpoint. NEXT_STEPS.md states
-whether pushes actually succeeded; repository creation alone is not a push.
+Compare the runtime identity and source hashes with the checkout; a later docs-only
+commit can differ without changing runtime code. NEXT_STEPS.md states whether
+pushes actually succeeded; repository creation alone is not a push.
 
 There was only one committed Phase 1 snapshot when the user reported the update
 unchanged. Phase 2 changes were uncommitted and the launch file still selected
@@ -61,7 +67,12 @@ This extends the working code and uses existing installed voices/models.
 | Module | Responsibility |
 | --- | --- |
 | config.py | Validated nonsecret settings; atomic JSON persistence |
-| desktop.py | Assistant, Activity, Memory, Audit, Settings; tracked Qt workers |
+| desktop.py | Native command center, Mission Control, memory, workflows, system/business views; tracked Qt workers |
+| ui_components.py | Shared native tokens, vector core, measured-level and reduced-motion contract |
+| intelligence.py | Deterministic intent descriptions and response styles; no autonomous planner |
+| workflows.py | One shared engine, saved routines/projects, serial permitted steps, replay and restart cancellation |
+| awareness.py | Worker-based system snapshots; explicit ephemeral foreground-title consent |
+| business.py | Separate opt-in ledger, exact minor-unit math and manual provenance; no live payments/messages |
 | voice_controller.py | UI-thread state/input/playback coordination, epochs, bounded events |
 | conversation.py | Ten deterministic voice states, exact local voice controls, greetings/proactive policy |
 | handsfree.py | Bounded capture frames/segments, WebRTC+RMS, single offline STT worker, local wake phrase |
@@ -83,6 +94,19 @@ Native STT cannot safely be killed; bounded shutdown discards late output.
 
 ## Implemented functionality
 
+- Phase 3 native full/compact UI, state-driven vector core, command palette,
+  reduced motion, opt-in always-on-top and background activation overlay.
+  Compact minimum is 430 × 530; default is 460 × 550 logical pixels. Controls are
+  separately laid out and covered by a regression for the former overlap.
+- Saved inspected routines, permitted project folders, explicit enable/run,
+  serial tool steps, per-step approvals/evidence, interruption and replay.
+  The development routine opens Explorer and launches VS Code; it does not run tests.
+- Structured local selected-project/workflow context, bounded memory relevance,
+  response styles and source-aware Memory Explorer with explicit retention deletion.
+- Actual Windows CPU/RAM and supported NVIDIA metrics. Foreground title/app/PID
+  are separately authorized, ephemeral and excluded from provider prompts.
+- Explicitly opened local inventory/order ledger with reservations, exact totals
+  and manually recorded payment/fulfillment. No banking or message sending.
 - Local Ollama conversation; OpenAI Responses and Gemini adapters behind explicit
   cloud consent/key/model selection. No cloud fallback. Actual cloud credentials
   have not been exercised; adapters use mocked transport tests.
@@ -131,11 +155,13 @@ Native STT cannot safely be killed; bounded shutdown discards late output.
   is off by default, and is not reliable full duplex. Normal gate prevents input
   during speech. Microphone indicator distinguishes gating from physical closure.
 - Time-aware greeting does not invent mood/activity. Scheduled reminders, calendar
-  integrations, screen/window observation, arbitrary shell/code tools, autonomous
-  planning, business workflows, runtime agent orchestration and remote access are absent.
+  integrations, screen/clipboard understanding, arbitrary shell/code tools,
+  autonomous planning, external business integrations, runtime agent orchestration
+  and remote access are absent. Opt-in foreground titles and manual local
+  bookkeeping do not implement those broader capabilities.
 - Context for unresolved project requests uses actual saved project/task memory;
   missing context returns an honest question. Natural app matching is a small exact
-  grammar, not an LLM action planner. UI Activity remains the approval surface.
+  grammar, not an LLM action planner. Mission Control is the approval surface.
 - Continuous history/memory user data and DPAPI secrets must stay local. DPAPI
   encrypted files do not migrate usefully to another Windows user; re-enter keys.
 - CUDA speech not tested, SAPI explicit output selection not supported (WinRT
@@ -152,9 +178,22 @@ Native STT cannot safely be killed; bounded shutdown discards late output.
 Tests distinguish fakes, synthetic speech, and real hardware. See TESTING.md,
 docs/SPEECH_QUALITY.md, docs/WAKE_ENGINES.md and final NEXT_STEPS.md.
 
-- Latest full suite: 295 passed in 47.93s; final focused health/export checks also
-  passed. Security/path/junction/DPAPI/storage,
-  mocked providers/API, offscreen GUI, audio framing/state/permission regressions.
+- Current Phase 3 suite: 444 passed in 90.79s; Ruff and 60 formatting checks pass.
+  Coverage includes real Qt workflow approval/resume, filesystem outcomes,
+  compact geometry, drafts/selections, memory relevance, cloud isolation,
+  accounting, consent and preserved voice/security regressions. Native offscreen
+  rendering was checked at 100%, 150% and 200% Qt scaling.
+- A live local qwen3:8b request at 150% Qt scaling completed in 9.125s with 203
+  UI timer ticks and a 0.235s maximum gap. Initially stopped Ollama was restarted;
+  real CPU/RAM/RTX 5070 samples succeeded. Foreground-title consent stayed off.
+- Two isolated 12-second idle UI samples measured 1.69% of one logical core /
+  93.56 MiB working set, then reduced motion 0.91% / 93.57 MiB with the core timer
+  stopped. Audio/model/provider activity was disabled; this is not packaged
+  voice CPU evidence or a long soak. Final frozen/hardware evidence is in NEXT_STEPS.md.
+- Historical 0.2.1 suite: 295 passed in 47.93s, including Windows
+  security/path/junction/DPAPI/storage, mocked providers/API, offscreen GUI and
+  audio framing/state/permission regressions. The following voice measurements
+  belong to Phase 2 unless the final record explicitly states a new run.
 - Actual local qwen3:8b response through the GUI, same-session follow-up, no Hold
   button, and Windows playback verified using generated PCM. A measured sample
   had 938 UI timer ticks and 0.141s maximum timer gap; provider turn 5.078s.
@@ -200,7 +239,7 @@ for local Ollama/voice. Do not put variable values, tokens or keys in this docum
 PowerShell, in the checkout (examples assume C:\Jarvis):
 
 ```powershell
-git clone -b feature/handsfree-voice https://github.com/roopawalamurtaza-droid/project-jarvis.git C:\Jarvis
+git clone -b codex/phase3-ultron https://github.com/roopawalamurtaza-droid/project-jarvis.git C:\Jarvis
 cd C:\Jarvis
 .\scripts\setup.ps1
 .\.venv\Scripts\python.exe -m jarvis --data-dir .local --doctor
@@ -210,16 +249,19 @@ cd C:\Jarvis
 .\.venv\Scripts\python.exe -m ruff check src tests scripts
 .\.venv\Scripts\python.exe -m ruff format --check src tests scripts
 .\.venv\Scripts\python.exe -m pip_audit --skip-editable
+.\.venv\Scripts\python.exe scripts\verify_phase3.py --data-dir .local --live
 .\scripts\package.ps1
 .\dist\JARVIS\JARVIS.exe --data-dir C:\Jarvis\.local --smoke-test
+.\dist\JARVIS\JARVIS.exe --data-dir C:\Jarvis\.local --verify-phase3
 .\.venv\Scripts\python.exe scripts\verify_handsfree.py --data-dir .local
 .\.venv\Scripts\python.exe scripts\verify_voice_desktop.py --data-dir .local --actions
 .\dist\JARVIS\JARVIS.exe --data-dir C:\Jarvis\.local --verify-voice-update --verification-actions
+.\.venv\Scripts\python.exe scripts\export_windows.py
 .\.venv\Scripts\python.exe scripts\export_handoff.py
 ```
 
 Run the clone command only on a new machine/empty destination. The GitHub default
-branch remains Phase 1 main; always choose feature/handsfree-voice to continue
+branch remains Phase 1 main; always choose codex/phase3-ultron to continue
 this implementation. Authentication/access for another account must be granted
 by the repository owner; private source is not publicly downloadable.
 
@@ -255,7 +297,7 @@ uncommitted/untracked nonignored changes. Restore with:
 
 ```powershell
 Expand-Archive -LiteralPath .\PROJECT_JARVIS_HANDOFF.zip -DestinationPath .\handoff
-git clone -b feature/handsfree-voice .\handoff\project-jarvis.bundle .\Jarvis
+git clone -b codex/phase3-ultron .\handoff\project-jarvis.bundle .\Jarvis
 cd .\Jarvis
 git status --short
 .\scripts\setup.ps1
@@ -282,8 +324,9 @@ startup. A complete build folder can be delivered separately; source is rebuilda
    testing; avoid unsupported reliability claims for stop/barge-in.
 5. Verify fresh Windows packaging, startup opt-in, uninstall/update/single-instance
    behavior; signing/installer before distribution. Run meaningful regressions.
-6. Implement durable reminders/calendar/screen context only as new authorized work;
-   the latest instruction says no new features until update repair is verified.
+6. Continue the explicitly incomplete Phase 3 capabilities only as scoped,
+   authorized work. Preserve approvals and provider/data isolation; do not
+   replace the existing application or mistake manual records for external proof.
 
 No engineering depends on access to this chat. All source contracts/tests/docs
 are in the repository; local diagnostic reports are summarized without private data.

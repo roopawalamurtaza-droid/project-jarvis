@@ -1,10 +1,10 @@
 # Roadmap and acceptance gates
 
-## Current Phase3 release:0.3.0
+## Current Phase 3 release: 0.3.0
 
-The user's Phase3 ULTRON protocol supersedes the original table below. Native
+The user's Phase 3 ULTRON protocol supersedes the original table below. Native
 design/core/compact UI, context/routine foundation, Mission Control/approvals/
-memory/system diagnostics and local bookkeeping are implemented with443 passing
+memory/system diagnostics and local bookkeeping are implemented with 444 passing
 tests. Final Windows acceptance is in NEXT_STEPS.md. Autonomous planning,
 streaming, durable schedules, screenshots/clipboard, research/coding execution
 and external business integrations remain incomplete. See PHASE3_RELEASE.md.
@@ -22,14 +22,17 @@ Original numbered plans below are historical, not completed functionality.
 | 7 | Remote operation | Explicit authorization/cost review; authenticated encrypted transport; no exposed desktop API |
 | 8 | Release | Signed distribution/update process, fresh-machine tests, performance and accessibility review |
 
-Phase 2 hands-free voice is now implemented in the existing application. The
-current milestone is a verified packaged update and developer handoff, with the
-user's live hands-free demonstration confirmed on this PC.
-Dedicated keyword detection, human acoustic accuracy acceptance, desktop context,
-durable scheduling, coding workflows and all later runtime/business features
-remain incomplete. The original Phase 2 desktop-context row above is a later
-milestone, distinct from the user's Phase 2 voice implementation and its measured
-acceptance boundaries.
+The previous Phase 2 voice milestone delivered a packaged hands-free update and
+developer handoff; the user confirmed its live demonstration on this PC. That
+acceptance belongs to the Phase 2 builds. Current Phase 3 microphone acceptance
+is recorded separately in NEXT_STEPS.md.
+
+Dedicated keyword detection, broad human acoustic accuracy testing, screenshot
+understanding, durable scheduling, project test/build execution, autonomous agents
+and external business integrations remain incomplete. Phase 3 implements limited
+opt-in foreground titles, inspected local routines and manual bookkeeping. The
+original Phase 2 desktop-context row above describes a broader later milestone,
+distinct from the user's Phase 2 voice work.
 Full phase acceptance is recorded in TESTING.md rather than inferred from source
 code or interface mockups. The first version uses explicit tools, not autonomous
 model action planning. Cloud credentials, monetary budgets, streaming and broader

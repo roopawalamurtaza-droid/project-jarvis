@@ -1,12 +1,19 @@
-# Current development and transfer state — 14October2026
+# Current development and transfer state — 14 October 2026
 
-## Phase3 command center — 0.3.0
+## Phase 3 command center — 0.3.0
 
-Current branch: **codex/phase3-ultron**. Read PHASE3_RELEASE.md. Baseline295
-passed; integrated443 passed in91.94s. Real native rendering at100/150/200% Qt
+Current branch: **codex/phase3-ultron**. Read PHASE3_RELEASE.md. Baseline 295
+passed; integrated **444 passed in 90.79s**. Real native rendering at 100/150/200% Qt
 scaling, local AI and two-step approved filesystem workflow passed. Final frozen
 identity and launch/push record will be appended after packaging verification.
 The broader protocol remains incomplete as explicitly documented.
+
+Compact input controls were found to overlap at the smallest window size;
+the layout was repaired and a geometry regression now verifies separate controls.
+The minimum is 430 × 530 logical pixels. Normal and reduced-motion isolated
+12-second Qt samples used 1.69% and 0.91% of one logical core respectively,
+about 93.6 MiB working set, with audio and AI disabled. This is not a long soak
+or active voice-resource benchmark.
 
 Next: packaged live-microphone acceptance, compact/background/reduced-motion
 review, long-idle measurements and fresh-Windows distribution. Preserve local

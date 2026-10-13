@@ -37,6 +37,8 @@ The stylesheet is the concrete palette and typography specification. Qt uses log
 
 The current stylesheet uses 13 logical pixels for body text, 23 for headings and 25 for the wordmark. The vector core fits a preferred 190 by 200 logical-pixel area and a 110-pixel-high compact area; its auxiliary text is smaller and must be checked under actual display scaling.
 
+Compact mode has a 430 by 530 logical-pixel minimum and opens at 460 by 550. It hides the full transcript and navigation, retains the last reply and readable input controls, and places microphone controls separately from Send/Interrupt. Full navigation scrolls on short windows. A geometry regression verifies the compact controls do not overlap at the minimum size.
+
 ## Core state contract
 
 The widget receives `set_state(name)`, `set_level(value)`, `clear_level()` and `set_reduce_motion(enabled)`. Its state input comes from real microphone, speech, conversation, approval and worker activity. A ring animation represents the named state; it is not a confidence score or evidence that an operation succeeded.
@@ -63,6 +65,8 @@ Reduced motion disables the widget timer. Hidden widgets stop animating; bringin
 Keyboard focus remains visible. Text entry, navigation, approvals, interrupt and emergency stop remain native accessible controls. `Ctrl+K` opens the command palette. A mouse or microphone is not required to use the command center. Warning and error states never depend on color alone.
 
 The delivered palette is dark. A tested light theme is not implemented; changing application colors arbitrarily is not a supported light rendering mode. Additional scaling, contrast, screen-reader and reduced-motion acceptance on diverse Windows displays must be recorded as actual tests, not inferred from Qt support.
+
+Actual offscreen native renders were inspected at Qt scaling factors 1, 1.5 and 2. This checks widget rendering, not physical-display or screen-reader acceptance. Two isolated 12-second idle UI samples used 1.69% of one logical core / 93.56 MiB working set with motion, then 0.91% / 93.57 MiB with reduced motion and the core timer off. Microphone, STT and provider activity were inactive; no packaged long-soak or voice-resource claim follows from these samples.
 
 ## Honest presence and privacy
 

@@ -1,14 +1,28 @@
 # Verification record — 2026-10-14
 
-Phase 3 source verification: **443 passed in 91.94s** (baseline295 passed in39.29s).
-Ruff check and all60 format checks pass. Actual Qt workflows/approvals/filesystem,
+Phase 3 source verification: **444 passed in 90.79s** (baseline 295 passed in 39.29s).
+Ruff check and all 60 format checks pass. Actual Qt workflows/approvals/filesystem,
 memory persistence/relevance, permission/cancellation/UI draft/selection, measured
 system status, exact business math and preserved voice/security regressions are
-covered. Real rendered native screens passed at100%,150%,200% Qt scaling; the
-150% live local qwen3:8b request completed in9.125s with203 UI timer ticks and a
+covered. A compact-window regression reproduces the former input-control overlap
+and verifies separate controls at the repaired 430 × 530 minimum. Real native
+renders passed at 100%, 150% and 200% Qt scaling; these are offscreen widget tests,
+not human acceptance on displays at those DPI settings. The
+150% live local qwen3:8b request completed in 9.125s with 203 UI timer ticks and a
 0.235s maximum gap. This is not a human acoustic or fresh-machine acceptance test.
 See PHASE3_RELEASE.md and final NEXT_STEPS.md for packaging/hardware limits.
-The following Phase2 records are historical.
+Two isolated 12-second offscreen idle UI samples measured 1.69% of one logical
+core and 93.56 MiB working set with motion, then 0.91% and 93.57 MiB with reduced
+motion and the core timer stopped. Microphone, STT and provider requests were
+inactive; this is neither voice-engine CPU evidence nor a packaged long-idle soak.
+
+An actual Windows development routine passed installed-app preflight and serially
+completed Explorer `open_folder` and VS Code `open_app` against an isolated
+generated project under the user's existing permitted root. Both returned verified
+`process_running` evidence and the run completed at step index 2. This verifies
+the launch path, not window visibility or project loading inside VS Code.
+
+The following Phase 2 records are historical.
 
 Phase 2 source verification: 280 tests passed in 41.81s before the last three
 health/export regressions were added. Final count, packaged build outcome and
@@ -25,8 +39,10 @@ timer gap was 0.500s during synthetic fixture generation in the diagnostic;
 it is not a production frame-latency benchmark. Human acoustic onset is unmeasured.
 
 Actual five-second microphone and HyperX speaker checks are detailed in
-docs/WAKE_ENGINES.md and docs/SPEECH_QUALITY.md. User speech in a real room has
-not passed an end-to-end acceptance run; do not confuse generated WAVs with it.
+docs/WAKE_ENGINES.md and docs/SPEECH_QUALITY.md. The user subsequently confirmed
+the Phase 2 live sequence and 0.2.1 recognition recovery, as recorded below.
+Broad room/noise/accent accuracy remains unmeasured, and current Phase 3 human
+acceptance must be recorded separately; generated WAVs do not establish it.
 
 Tests were executed on Windows 11 with Python 3.12.14, using isolated temporary
 data and mocked cloud requests. Real local model/audio checks were separate.
@@ -65,7 +81,7 @@ tests successfully; these restrictions were not treated as application failures.
 
 ## Real execution evidence
 
-Latest 0.2.1 recognition repair: **295 passed in 47.93s**, including twelve
+Historical 0.2.1 recognition repair: **295 passed in 47.93s**, including twelve
 completed/pending/cancelled-recognition regression cases. The first three cases
 failed before the fix. Final packaged evidence is in NEXT_STEPS.md.
 
@@ -113,12 +129,12 @@ receipt; they check engine state and filesystem results.
    and compact view behave correctly on your screen.
 2. Choose the HyperX microphone, hold to speak a phrase, release, review the actual
    recognized words, send them, and judge the spoken answer's audibility.
-3. Open Notepad, Calculator and VS Code from Activity. Check window visibility;
+3. Open Notepad, Calculator and VS Code from Mission Control. Check window visibility;
    the tool currently verifies a process or accepted launch request, not the window.
 4. Restart after saving a memory/history preference; inspect it and exercise deletion/export.
 5. Test the executable's whole folder on a clean Windows 11 machine. Models and
    credentials are separate setup steps. Packaging smoke is not a clean-install test.
 6. Configure an authorized OpenAI/Gemini account before paid live API verification.
 
-Phase 1 is a verified development build with these acceptance limitations. It is
+The current application is a development release with these acceptance limitations. It is
 not a signed production release or a fully autonomous Windows operator.

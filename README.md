@@ -1,10 +1,10 @@
 # Project JARVIS
 
-**Current development release:0.3.0 · Phase3 command center.** Continue branch
+**Current development release: 0.3.0 · Phase 3 command center.** Continue branch
 `codex/phase3-ultron` in the private repository. New native core, compact/background
 modes, Mission Control, inspected routines, project context, Memory Explorer,
-Windows measurements and an opt-in local business ledger extend repaired0.2.1.
-See [Phase3 delivery and limits](PHASE3_RELEASE.md) and NEXT_STEPS.md for actual
+Windows measurements and an opt-in local business ledger extend repaired 0.2.1.
+See [Phase 3 delivery and limits](PHASE3_RELEASE.md) and NEXT_STEPS.md for actual
 build/verification/push records. Diagnostics identifies the running build.
 
 Routines start disabled: inspect, enable, then Run. Ctrl+K opens commands.
@@ -15,7 +15,7 @@ are manual bookkeeping. The older repair record below is engineering history.
 A native Windows assistant with real local AI conversation, opt-in hands-free voice,
 Windows speech, local memory, and narrowly scoped desktop actions.
 
-The first development build uses PySide6, a shared Python service, SQLite and an
+The application uses PySide6, a shared Python service, SQLite and an
 optional authenticated FastAPI interface. Ollama is the default. OpenAI and Gemini
 adapters are available after the user configures a key, model and cloud consent.
 No cloud fallback occurs. Passive microphone capture requires saved opt-in.
@@ -25,7 +25,7 @@ No cloud fallback occurs. Passive microphone capture requires saved opt-in.
 Dependencies and the offline `base.en` speech model are installed in the project.
 An existing `qwen3:8b` model was used for real conversation verification.
 
-Double-click **Start JARVIS.cmd** to launch the verified executable with this
+Double-click **Start JARVIS.cmd** to launch the packaged executable with this
 computer's local configuration. Keep the `dist\JARVIS` folder intact. The source
 launcher below uses the same configuration.
 
@@ -48,11 +48,12 @@ See [the voice guide](docs/HANDS_FREE.md) for tuning and verification limits.
 Settings shows version, Git commit, build time, executable path, and live startup
 health. Source edits require rebuilding: the launcher runs `dist\JARVIS\JARVIS.exe`.
 
-The latest recognition repair is **0.2.1**, runtime source commit `d1f0fe0622a4`.
+The Phase 2 recognition repair was **0.2.1**, runtime source commit `d1f0fe0622a4`.
 Completed wake misses and empty results now return to listening instead of leaving
 Recognizing speech on screen; genuine pending work remains visibly pending.
-All **295 tests passed**. See NEXT_STEPS.md for the verified packaged identity and
-transfer artifacts, and RECOGNITION_REPAIR.md for the reproduced failure and fix.
+All **295 tests passed** at that checkpoint. Current Phase 3 has **444 passing
+tests**. See NEXT_STEPS.md for the current packaged identity and transfer
+artifacts, and RECOGNITION_REPAIR.md for the reproduced Phase 2 failure and fix.
 The earlier 0.2.0 build passed the user's live Chrome/VS Code follow-up/sleep
 demonstration; that does not erase the subsequently reported recognition bug.
 
@@ -69,9 +70,13 @@ demonstration; that does not erase the subsequently reported recognition bug.
 - Task state, approval/rejection/cancellation, audit history and emergency stop.
 - Current-user Windows DPAPI credential protection.
 - Native desktop, compact floating view and system tray controls.
+- Native state-driven core, command palette, reduced motion and background activation overlay.
+- Inspected multi-step routines, selected-project context and evidence-based workflow replay.
+- Memory Explorer, measured Windows resources and separately authorized foreground title context.
+- Opt-in local inventory/order ledger with explicit manual payment and fulfillment records.
 - Optional bearer-authenticated API on `127.0.0.1`; disabled unless started explicitly.
 
-Actions use the **Activity** form or exact commands such as:
+Actions use **Mission Control** or exact commands such as:
 
 ```text
 /tool open_app {"app":"vscode"}
@@ -81,7 +86,7 @@ Actions use the **Activity** form or exact commands such as:
 Exact human requests such as **Open Chrome**, **And open VS Code**, or **Open my
 downloads folder** route through the existing permission engine. Downloads must
 be in a permitted folder; saved projects can contain a single absolute folder path.
-Model output never executes itself. Approvals are reviewed in Activity. Read
+Model output never executes itself. Approvals are reviewed in Mission Control. Read
 results remain local and are not added to cloud chat.
 
 ## Development
@@ -98,11 +103,12 @@ See [SETUP.md](SETUP.md), [SECURITY.md](SECURITY.md), [TESTING.md](TESTING.md),
 [ARCHITECTURE.md](ARCHITECTURE.md), and [NEXT_STEPS.md](NEXT_STEPS.md).
 Read [PROJECT_HANDOFF.md](PROJECT_HANDOFF.md) first when continuing development.
 Private repository: https://github.com/roopawalamurtaza-droid/project-jarvis,
-branch `feature/handsfree-voice`. The handoff records actual transfer/build status.
+branch `codex/phase3-ultron`. The handoff records actual transfer/build status.
 `uv.lock` pins the complete dependency graph. No real credentials, recordings,
 local databases, downloaded model files, or build output are committed.
 
-This is an initial engineering build. Screen vision, browser control, arbitrary
-developer commands, scheduling, business workflows and remote access are future
-milestones. Cloud providers still require live credential-based verification.
+This is a development release. Screen vision, browser control, project test/build
+execution, durable scheduling, external business integrations and remote access
+remain incomplete. The local ledger does not verify or move money. Cloud
+providers still require live credential-based verification.
 

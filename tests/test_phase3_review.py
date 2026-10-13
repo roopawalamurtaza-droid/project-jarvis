@@ -155,6 +155,7 @@ def reviewed_window(review_app, reviewed_service, monkeypatch):
     window.interrupt()
     settle(review_app, window)
     window.close()
+    settle(review_app, window)
     review_app.processEvents()
 
 
@@ -165,6 +166,24 @@ def snapshot(service):
         "workflow_runs": service.workflows.runs(),
         "context": {},
     }
+
+
+def test_compact_input_controls_have_separate_geometry(reviewed_window, review_app):
+    from PySide6.QtCore import QPoint, QRect
+
+    window = reviewed_window
+    window.show()
+    window.toggle_compact()
+    window.resize(window.minimumSize())
+    review_app.processEvents()
+
+    def bounds(widget):
+        return QRect(widget.mapTo(window, QPoint(0, 0)), widget.size())
+
+    assert not bounds(window.composer).intersects(bounds(window.mic_button))
+    assert not bounds(window.composer).intersects(bounds(window.voice_status))
+    assert bounds(window.send_button).right() < window.width()
+    assert bounds(window.status_label).bottom() < window.height()
 
 
 def test_routine_refresh_preserves_an_unsaved_inspected_draft(reviewed_window, reviewed_service):

@@ -1,9 +1,9 @@
 # Phase 3 command center development release
 
-14 October2026. Version0.3.0 extends repaired0.2.1 on **codex/phase3-ultron**.
+14 October 2026. Version 0.3.0 extends repaired 0.2.1 on **codex/phase3-ultron**.
 Private remote: https://github.com/roopawalamurtaza-droid/project-jarvis .
 NEXT_STEPS.md records final packaged identity and push results. The minimum
-working Phase3 foundation is implemented; the broader protocol is incomplete.
+working Phase 3 foundation is implemented; the broader protocol is incomplete.
 
 ## Delivered
 
@@ -13,7 +13,9 @@ working Phase3 foundation is implemented; the broader protocol is incomplete.
 - Core reads actual controller/worker/approval states; listening requires capture.
   Mic RMS comes from real frames. Speaking explicitly shows playback state with
   no PCM level: synthesized amplitude is unavailable from this Windows engine.
-  Idle motion is8fps; animation stops hidden/reduced and static critical states.
+  Idle motion is 8 fps; animation stops hidden/reduced and static critical states.
+  Compact minimum is 430 × 530; default is 460 × 550 logical pixels. Its controls
+  use separate rows; the former input overlap has a geometry regression.
 - Mission Control exposes tasks, exact arguments, one-use approvals, results,
   cancellation and active workers. Workflow Replay shows actual serial steps,
   dependencies and task evidence, never fabricated progress percentages.
@@ -34,7 +36,7 @@ working Phase3 foundation is implemented; the broader protocol is incomplete.
 - Memory Explorer searches/corrects/deletes/exports explicit memories with source
   metadata. Added summary/application/routine/instructions categories. Retrieval
   ranks token matches then recency across bounded SQL matches, including older
-  memories beyond the latest500. Retention deletion requires explicit preview;
+  memories beyond the latest 500. Retention deletion requires explicit preview;
   normal startup does not delete saved memories. No embeddings or invented graph.
 - Worker-based real Windows CPU/physical RAM and supported NVIDIA metrics. First
   CPU sample is unavailable until the second. Foreground app/title/PID require a
@@ -47,7 +49,7 @@ working Phase3 foundation is implemented; the broader protocol is incomplete.
   No financial imports, purchases, transfers, private-account automation or messages.
 - Diagnostics: actual version/commit/build/path, voice/capture/wake, AI health,
   reported tokens, measured last-response latency, dated startup errors. API cost
-  is unavailable rather than invented. Existing Phase2 wake/VAD/offline STT/
+  is unavailable rather than invented. Existing Phase 2 wake/VAD/offline STT/
   follow-up/sleep/half-duplex/normalization/privacy/emergency-stop remain.
 
 ## Architecture and safeguards
@@ -67,20 +69,33 @@ already accepted launches cannot be undone. Do not widen roots for demos.
 
 ## Evidence and boundaries
 
-Baseline295 passed in39.29s. Final443 passed in91.94s: actual Qt workflow
+Baseline 295 passed in 39.29s. Current 444 passed in 90.79s: actual Qt workflow
 approval/resume, scoped filesystem results, cancellation/settings/draft/selection
 regressions, relevance/source/cloud privacy, accounting, consent revocation and
-voice/security regression tests. Actual native rendering passed at Qt factors
-1,1.5,2. At150% live Ollama/qwen3:8b responded in9.125s,203 UI ticks, max gap0.235s.
+voice/security regression tests. Ruff and all 60 formatting checks pass. Actual
+native offscreen rendering passed at Qt factors 1, 1.5 and 2; this does not prove
+human acceptance on displays at those DPI settings. At 150%, live Ollama/qwen3:8b
+responded in 9.125s with 203 UI ticks and a 0.235s maximum gap.
 The installed Ollama service was stopped initially; starting its loopback server
-resolved the live connection failure. Real CPU/RAM/RTX5070 samples succeeded.
+resolved the live connection failure. Real CPU/RAM/RTX 5070 samples succeeded.
 Foreground consent stayed off; permission handling uses mocked tests.
+
+Two isolated 12-second offscreen idle samples measured 1.69% of one logical core
+and 93.56 MiB working set with motion, then 0.91% and 93.57 MiB with reduced
+motion and the core timer stopped. Audio, STT and providers were inactive.
+This is not a packaged compositor, voice-engine or long-soak benchmark.
+
+An actual Windows development routine passed installed-app preflight and serially
+opened an isolated generated project folder in Explorer and launched VS Code.
+Both steps completed with verified `process_running` evidence; the run reached
+step index 2. The project stayed within the user's existing permitted root. No
+window visibility or project loading inside VS Code was asserted.
 
 Screenshots come from the actual application with generated diagnostic data.
 Canva returned no completed artifact/job ID before interruption; native vectors
 are delivered. See docs/DESIGN_SYSTEM.md. Frozen package checks and current-PC
 launch are recorded in NEXT_STEPS.md. Prior human acoustic acceptance belongs to
-0.2.1; it is not silently relabelled as0.3.0. Samples are not latency/accuracy SLAs.
+0.2.1; it is not silently relabelled as 0.3.0. Samples are not latency/accuracy SLAs.
 
 Incomplete: streaming, dedicated keyword model, full duplex/AEC, synthesized PCM
 waveform, screenshots/clipboard understanding, project test/build execution,
@@ -110,7 +125,7 @@ PowerShell in C:\Jarvis:
 ```
 
 Tests require ordinary Windows permissions for junction/DPAPI fixtures when an
-agent sandbox restricts them. Phase3 diagnostic uses isolated generated data,
+agent sandbox restricts them. Phase 3 diagnostic uses isolated generated data,
 no microphone or OS application launches; --live is local Ollama only. Voice
 diagnostic plays synthetic speech, runs local STT/AI, and never captures the mic.
 Keep full dist\JARVIS folder and `.local` intact during replacement. Inspect
