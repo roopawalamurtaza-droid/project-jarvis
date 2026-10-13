@@ -6,6 +6,12 @@ repeat runs was repaired and covered by forced background-GC regressions.
 Frozen GUI, Windows action and memory/workflow checks passed separately. Read
 NEXT_STEPS.md for exact runtime identity, voice, human acceptance and limitations.
 
+The user separately confirmed the current 0.4.0 live Notepad → combined Chrome
+and Python tutorial search → VS Code follow-up → sleep sequence worked, including
+visible Google results, spoken replies and hands-free operation without terminal
+instructions. This is human observation, not browser-adapter page inspection or
+synthetic speech. Wider acoustic and fresh-machine acceptance remain incomplete.
+
 ## Phase 4 action-engine checkpoint
 
 Current source version is 0.4.0 on `codex/phase4-actions`. The retained Phase 3
@@ -48,9 +54,10 @@ The user-confirmed 0.3.0 microphone sequence below is historical, not 0.4.0 proo
 The Phase 4 action flags explicitly launch diagnostic apps and browser requests
 under local permissions. Without them, the diagnostic only checks discovery/UI.
 The voice diagnostic uses generated speech and Windows playback without capturing
-the microphone. Its action flag adds authorized app launch checks. Human current-
-build voice acceptance, fresh-machine testing and broader room/noise/accent/soak
-coverage remain separate gates. See PHASE4_RELEASE.md for scope and safeguards.
+the microphone. Its action flag adds authorized app launch checks. The basic
+current-build sequence has the separate human confirmation above; fresh-machine
+testing and broader room/noise/accent/soak coverage remain open. See
+PHASE4_RELEASE.md for scope and safeguards.
 
 ## Historical Phase 3 verification
 

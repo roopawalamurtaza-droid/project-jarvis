@@ -213,6 +213,11 @@ The final 0.4.0 package passed GUI startup, actual Windows actions, preserved
 memory/workflows and generated-speech voice/action/shutdown checks. Its normal
 window was launched and the preserved settings verified. Human acceptance and
 the exact runtime/transfer identity are recorded separately in NEXT_STEPS.md.
+The user confirmed the current live Notepad → combined Chrome/Python tutorial
+search → VS Code follow-up → sleep sequence, including visible Google results
+and hands-free spoken responses without terminal instructions. This human
+report does not add page-inspection capability to the browser adapter or establish
+broader room/noise, soak or fresh-machine acceptance.
 Cloud function-call parsing uses mocked transport tests unless a separate live
 credential-based result is explicitly recorded. No synthetic speech fixture or
 mocked browser establishes human microphone reliability or page navigation.
@@ -264,7 +269,7 @@ handoff archive and bundle instructions in PROJECT_HANDOFF.md.
 Read PROJECT_HANDOFF.md, NEXT_STEPS.md, TESTING.md and the fixed schemas before
 changing action routing. Reproduce failures with the current executable and
 report actual receipts. Retain existing voice and security tests. First finish
-the current release's Windows/package/human checks; then prioritize deterministic
+broader hardware and fresh-machine checks; then prioritize deterministic
 browser observation and narrowly scoped controls without converting a launch
 receipt into a page, research, financial or application-content claim. Broader
 autonomy is unfinished work, not permission to add unrestricted OS execution.

@@ -9,6 +9,10 @@ center, memory, workflows and hands-free voice remain. Read
 for actual packaged identity, testing and push records. Diagnostics identifies
 the executable you are running; source edits alone do not update it.
 
+The 0.4.0 suite passed **823 tests**. On 14 October 2026, the user confirmed the
+live hands-free Notepad, Chrome/Python tutorial search, VS Code follow-up and
+sleep sequence, including visible search results and spoken replies.
+
 Open **Application Library** and refresh discovered apps. Inspect a disabled app's
 exact target before choosing **Review & enable**. Add an alias or favorite there;
 configure your browser and search engine in Settings. Say or type **Open Notepad**,

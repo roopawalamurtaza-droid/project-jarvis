@@ -85,10 +85,15 @@ Other user apps were not closed. Final build identity and transfer evidence:
   PID 41768, title `JARVIS · Command Center`, nonzero window handle, responsive,
   exact process path `C:\Jarvis\dist\JARVIS\JARVIS.exe` with `.local` data.
   Saved settings, memory count and credential file still matched after launch.
-- Human 0.4.0 acceptance is requested and pending: wake/Notepad → combined
-  Chrome/search → VS Code follow-up → sleep. The requested check includes actual
-  browser results, which the launcher cannot inspect. Do not substitute prior
-  0.3.0 live acceptance or generated speech for this human result.
+- **Human 0.4.0 acceptance passed on 14 October 2026:** the user confirmed
+  “Hey Jarvis, open Notepad” → “Now open Chrome and search for Python tutorials”
+  → “Open VS Code too” → “Thanks Jarvis, go to sleep.” Apps opened, Google's
+  Python tutorial search results appeared, spoken responses/follow-up/sleep
+  worked hands-free, and no terminal instructions were required. This is a
+  direct user report about the current build, separate from generated speech
+  and prior 0.3.0 acceptance. The browser adapter still does not inspect pages;
+  its `navigation_verified` field remains false. Broader acoustic/fresh-PC
+  acceptance is not implied.
 - Current source/history handoff is `transfer/PROJECT_JARVIS_HANDOFF.zip`; its
   MANIFEST and adjacent SHA256 identify the final documentation checkpoint.
   The bundle preserves all Git branches/history and is checked by restoration.

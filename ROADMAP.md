@@ -10,6 +10,9 @@ failure receipts and UI approval/cancellation/diagnostics. Optional strict model
 action proposals remain off by default and individually approved. See
 PHASE4_RELEASE.md; NEXT_STEPS.md records final source, package, hardware, test
 and successful push evidence. Code presence does not satisfy those release gates.
+The user confirmed the current 0.4.0 live hands-free app/search/follow-up/sleep
+sequence on 14 October 2026. Broader acoustic, fresh-machine and advanced browser
+observation gates remain open.
 
 | Gate | Current scope and required proof |
 | --- | --- |

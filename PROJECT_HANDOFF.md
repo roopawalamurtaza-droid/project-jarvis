@@ -3,8 +3,10 @@
 The final 0.4.0 source suite passed **823 tests**. The packaged GUI, actual
 Windows app/browser actions, memory/workflows and generated-speech voice checks
 passed; the replacement window was launched on this PC. NEXT_STEPS.md records
-the runtime/source identity and whether current human voice/page acceptance is
-confirmed. The broader autonomy protocol remains incomplete.
+the runtime/source identity. The user separately confirmed the current live
+Notepad → combined Chrome/Python tutorial search → VS Code follow-up → sleep
+sequence, including visible search results and hands-free spoken operation.
+The broader autonomy protocol remains incomplete.
 
 ## Current Phase 4 checkpoint — 14 October 2026
 
@@ -66,8 +68,9 @@ wording, honest execution evidence and user control take precedence over fiction
 capability claims. The current milestone is the Phase 4 local action engine,
 application library, explicit multi-command dispatch and evidence-based Windows
 feedback, extending the Phase 3 command center and repaired voice system. The
-user confirmed the 0.3.0 live hands-free sequence on this PC. Phase 4 acceptance
-must be recorded against its current source and packaged build separately.
+user confirmed both the historical 0.3.0 sequence and the current 0.4.0 live
+Notepad, Chrome/search, VS Code follow-up and sleep sequence on this PC. The
+current-build evidence is recorded separately in NEXT_STEPS.md and TESTING.md.
 Broader acoustic accuracy and fresh-machine distribution acceptance remain open.
 
 ## Repository and actual state
