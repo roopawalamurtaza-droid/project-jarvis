@@ -142,7 +142,11 @@ def main():
         report["same_session"] = window.session_id == first_session
         if args.actions:
             report["desktop_actions"] = []
-            for name, phrase in (("chrome", "Open Chrome."), ("vscode", "And open VS Code.")):
+            for name, phrase in (
+                ("notepad", "Hey Jarvis, open Notepad."),
+                ("chrome", "Open Chrome."),
+                ("vscode", "Open VS Code too."),
+            ):
                 sample = generate_fixture(fixtures / f"desktop-{name}.wav", phrase)
                 play(sample)
                 wait(
@@ -166,6 +170,45 @@ def main():
                         "note": "Process/launcher evidence; application window visibility not asserted",
                     }
                 )
+            # Phase 4's compound command enters the exact same chat dispatcher
+            # as native typed input. Find the new action run, not an older task.
+            prior_runs = {run["id"] for run in service.actions.history()}
+            sample = generate_fixture(
+                fixtures / "desktop-browser-search.wav",
+                "Now open Chrome and search for Python tutorials.",
+            )
+            play(sample)
+            wait(
+                lambda: (
+                    "chat" not in window._jobs
+                    and window.voice_controller.session.state == VoiceState.FOLLOW_UP_LISTENING
+                    and window.voice_controller.input.mode == "command"
+                )
+            )
+            runs = [run for run in service.actions.history() if run["id"] not in prior_runs]
+            browser_run = next(
+                (run for run in runs if any(step["tool"] == "search_web" for step in run["steps"])),
+                None,
+            )
+            if browser_run is None or browser_run["state"] != "completed":
+                raise RuntimeError("Compound hands-free browser action did not complete")
+            search_step = next(
+                step for step in browser_run["steps"] if step["tool"] == "search_web"
+            )
+            report["compound_voice_browser_search"] = {
+                "state": browser_run["state"],
+                "steps": [
+                    {
+                        "tool": step["tool"],
+                        "state": step["state"],
+                        "verified": step["result"]["verified"],
+                    }
+                    for step in browser_run["steps"]
+                ],
+                "url": search_step["result"]["url"],
+                "navigation_verified": search_step["result"]["navigation_verified"],
+                "evidence": "Generated PCM through the same Qt voice/chat/action engine; actual browser launcher, no page inspection",
+            }
         report["ui_ticks"] = len(ticks)
         report["maximum_ui_timer_gap_seconds"] = round(
             max((b - a for a, b in zip(ticks, ticks[1:])), default=0), 3

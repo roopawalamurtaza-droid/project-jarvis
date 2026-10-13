@@ -40,8 +40,11 @@ def test_followup_launch_and_unavailable_app_are_exact(tmp_path):
     assert result["task"]["arguments"] == {"app": "vscode"}
     assert result["task"]["state"] == "awaiting_approval"
     before = len(service.store.tasks())
-    assert "unavailable" in service.chat("Open Spotify.")["text"]
-    assert len(service.store.tasks()) == before
+    # Phase 4 discovers additional applications and records requests under the
+    # same manual policy, rather than incorrectly declaring Spotify unsupported.
+    spotify = service.chat("Open Spotify.")
+    assert spotify["task"]["state"] == "awaiting_approval"
+    assert len(service.store.tasks()) == before + 1
 
 
 def test_downloads_remains_scoped(tmp_path):

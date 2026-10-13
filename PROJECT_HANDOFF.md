@@ -1,10 +1,33 @@
 # Project JARVIS engineering handoff
 
-## Current Phase 3 checkpoint — 14 October 2026
+## Current Phase 4 checkpoint — 14 October 2026
 
-Continue **codex/phase3-ultron**, version 0.3.0, in the same private repository.
-PHASE3_RELEASE.md is the current feature/architecture/commands/security/testing
-contract. NEXT_STEPS.md has final packaging/push/transfer evidence. Main and
+Continue **codex/phase4-actions**, source version **0.4.0**, in the same private
+repository. PHASE4_RELEASE.md is the current action-engine feature, architecture,
+permission and limits contract. NEXT_STEPS.md records final source/runtime
+identities, suite results, actual Windows/human acceptance, successful pushes and
+transfer status. Do not infer package success from source changes or an earlier
+phase's microphone test.
+
+The previous exact four-app grammar and text-only provider adapters could not
+execute broader or combined requests. Phase 4 adds local application discovery,
+scoped aliases/grants, validated native launch/focus, website/search actions,
+bounded serial multi-command dispatch and actual receipts. Voice and text already
+shared the service and continue through the same dispatcher. Optional structured
+model action proposals are off by default and always require individual approval.
+No arbitrary shell, page inspection or live research was introduced.
+
+No runtime library was added. SQLite action history is additive; app overrides
+are local applications.json. Preserve `.local` settings, databases, keys and
+models, and keep them outside Git/archives. Preserve voice generation guards,
+root/credential checks, DPAPI, cloud isolation and packaging hooks. Read the
+current Diagnostics identity before testing or replacing a running executable.
+
+## Historical Phase 3 checkpoint
+
+The completed **codex/phase3-ultron** checkpoint is version 0.3.0 in the same
+private repository. PHASE3_RELEASE.md preserves that milestone's contract.
+NEXT_STEPS.md retains its packaging/push/transfer evidence. Main and
 feature/handsfree-voice preserve earlier milestones; default branch is unchanged.
 
 Baseline 295 and integrated 444 tests passed. Native core/full/compact/background,
@@ -14,7 +37,7 @@ dependency; workflow tables are additive. Preserve original voice/privacy/path/
 provider limits, sanitized package PATH, WebRTC hook and generation cancellation.
 Live `.local` data/keys/models must stay out of Git/archives. Read current
 Diagnostics then test the actual microphone; do not infer hardware success.
-Current 0.3.0 frozen diagnostics passed and the user separately confirmed the
+The 0.3.0 frozen diagnostics passed and the user separately confirmed the
 live wake/time, Chrome, VS Code follow-up and sleep sequence with spoken replies
 and no Hold button. NEXT_STEPS.md records the tested runtime identity and limits.
 Outstanding capabilities are explicit in PHASE3_RELEASE.md. Phase 2 failure and
@@ -34,18 +57,19 @@ RECOGNITION_REPAIR.md. Use the latest record in NEXT_STEPS.md, not the earlier
 A Windows desktop companion with local-first conversation, explicit memory,
 opt-in hands-free voice, and narrow permission-controlled actions. Calm concise
 wording, honest execution evidence and user control take precedence over fictional
-capability claims. The current milestone is the Phase 3 native command center,
-inspected workflows, local context/memory controls and measured status, extending
-the repaired voice system. The user confirmed Phase 2 live hands-free behavior
-on this PC; Phase 3 hardware acceptance belongs in its separate final record.
+capability claims. The current milestone is the Phase 4 local action engine,
+application library, explicit multi-command dispatch and evidence-based Windows
+feedback, extending the Phase 3 command center and repaired voice system. The
+user confirmed the 0.3.0 live hands-free sequence on this PC. Phase 4 acceptance
+must be recorded against its current source and packaged build separately.
 Broader acoustic accuracy and fresh-machine distribution acceptance remain open.
 
 ## Repository and actual state
 
 Private repository: https://github.com/roopawalamurtaza-droid/project-jarvis
 
-Working branch: `codex/phase3-ultron`. `feature/handsfree-voice` preserves repaired
-Phase 2, and `main` preserves the Phase 1 checkpoint
+Working branch: `codex/phase4-actions`. `codex/phase3-ultron` preserves Phase 3,
+`feature/handsfree-voice` preserves repaired Phase 2, and `main` preserves the Phase 1 checkpoint
 `b3f3c37`. The repository was created private during this handoff. No secrets or
 live user data belong in it. The runtime build commit is recorded in packaged
 `build_info.json`; the final handoff-only commit is Git HEAD and export MANIFEST.json.
@@ -73,6 +97,11 @@ This extends the working code and uses existing installed voices/models.
 | desktop.py | Native command center, Mission Control, memory, workflows, system/business views; tracked Qt workers |
 | ui_components.py | Shared native tokens, vector core, measured-level and reduced-motion contract |
 | intelligence.py | Deterministic intent descriptions and response styles; no autonomous planner |
+| applications.py | Bounded local discovery/cache, exact aliases, favorites/custom EXEs and exact-target grants |
+| windows_actions.py | Absolute EXE/fixed Store activation, exact visible-window and foreground focus verification |
+| browser_actions.py | Public HTTPS destination checks, fixed mappings and encoded browser search launches |
+| action_router.py | Explicit human request grammar, bounded action/dependency plans and requested-browser context |
+| action_dispatcher.py | Serial persisted receipts, partial failure, one-use approval continuation and restart cancellation |
 | workflows.py | One shared engine, saved routines/projects, serial permitted steps, replay and restart cancellation |
 | awareness.py | Worker-based system snapshots; explicit ephemeral foreground-title consent |
 | business.py | Separate opt-in ledger, exact minor-unit math and manual provenance; no live payments/messages |
@@ -80,7 +109,7 @@ This extends the working code and uses existing installed voices/models.
 | conversation.py | Ten deterministic voice states, exact local voice controls, greetings/proactive policy |
 | handsfree.py | Bounded capture frames/segments, WebRTC+RMS, single offline STT worker, local wake phrase |
 | voice.py / speech_text.py | Push-to-talk/offline model preflight; installed TTS, speech-only normalization |
-| service.py / providers.py | Bounded conversation/context/cancellation and selected AI adapters |
+| service.py / providers.py | Shared voice/text dispatch and bounded conversation; optional strict reviewed function-call proposals |
 | short_commands.py | Exact human app/project/time/context intents; never model-generated actions |
 | tools.py / tasks.py | Fixed tool schemas, path checks, approvals, execution evidence, emergency stop |
 | storage.py / secrets.py | Memory/history/task/audit persistence; Windows current-user DPAPI keys |
@@ -97,6 +126,24 @@ Native STT cannot safely be killed; bounded shutdown discards late output.
 
 ## Implemented functionality
 
+- Phase 4 Application Library discovers supported known locations, App Paths,
+  fixed supported Store apps and safe bounded Start Menu shortcut metadata.
+  Arbitrary discovered/custom entries start disabled. Review the exact target
+  before enabling; aliases/favorites are local and grants cannot follow a changed target.
+- Native absolute EXE or fixed Store activation, exact visible-window checks and
+  verified foreground focus. Windows foreground restrictions can refuse focus.
+  A launch receipt without a matching window reports accepted launch, not “is open.”
+- Known/approved external HTTPS website and encoded Google/Bing/DuckDuckGo/
+  YouTube search launches in the default/named browser. The page and active tab
+  are not inspected; navigation and new-window verification remain false.
+- Unified deterministic voice/text action routing, at most six steps, serial
+  dependencies, independent partial failure, persisted receipts, approvals and
+  stop at safe boundaries. Restart cancels unfinished requests without replay.
+- Optional strict Ollama/OpenAI Responses/Gemini action proposals, disabled by
+  default, with individual approval for every interpreted step. Only the current
+  explicit request and fixed schemas reach the provider; catalogs, memory,
+  history, titles, file results and business data do not. Plain model output
+  never dispatches, and real results produce the spoken summary locally.
 - Phase 3 native full/compact UI, state-driven vector core, command palette,
   reduced motion, opt-in always-on-top and background activation overlay.
   Compact minimum is 430 × 530; default is 460 × 550 logical pixels. Controls are
@@ -118,12 +165,14 @@ Native STT cannot safely be killed; bounded shutdown discards late output.
 - Explicit saved memory categories/search/edit/delete/export. Local Ollama gets
   bounded untrusted saved references; cloud never receives implicit local memory,
   hydrated local history, or tool file output.
-- Five fixed tools: list/read/open folder, create directory, launch allowlisted
-  Notepad/Calculator/VS Code/Chrome. Human exact natural commands reuse the same
-  engine. Saved project folder paths and Downloads still require allowed roots.
+- Ten fixed tools: list/read/open folder, create directory, open/focus app,
+  website/search launch, application library and measured system status. Human
+  natural requests reuse the same engine. Saved projects, Downloads, Documents
+  and Desktop still require the configured allowed roots.
 - Task states/approval/rejection/cancellation, expiry and one-use approvals,
-  startup recovery, audit trail, emergency stop. Launch evidence is process or
-  accepted launcher status, not asserted window visibility/project loading.
+  startup recovery, audit trail, emergency stop. Launch evidence distinguishes
+  process/accepted launcher, matching visible windows and verified foreground
+  focus; none proves project loading or application content.
 - Push-to-talk fallback and optional wake listening. Offline Whisper checks the
   initial wake phrase on WebRTC-segmented audio. Same-utterance command is kept.
   Wake recognition is separate from VAD; silence is not transcribed/uploaded.
@@ -159,12 +208,19 @@ Native STT cannot safely be killed; bounded shutdown discards late output.
   during speech. Microphone indicator distinguishes gating from physical closure.
 - Time-aware greeting does not invent mood/activity. Scheduled reminders, calendar
   integrations, screen/clipboard understanding, arbitrary shell/code tools,
-  autonomous planning, external business integrations, runtime agent orchestration
+  unattended autonomous planning, external business integrations, runtime agent orchestration
   and remote access are absent. Opt-in foreground titles and manual local
   bookkeeping do not implement those broader capabilities.
 - Context for unresolved project requests uses actual saved project/task memory;
-  missing context returns an honest question. Natural app matching is a small exact
-  grammar, not an LLM action planner. Mission Control is the approval surface.
+  missing context returns an honest question. Application matching is exact, with
+  reviewed aliases and ambiguity refusal. Optional model proposals are bounded
+  and individually approved; they are not unattended planning. Mission Control
+  remains the approval surface.
+- Browser activation does not verify loaded pages, active tabs, redirects or
+  search content. Live research, page reading/clicking/forms/downloads, arbitrary
+  file finding/open-file actions, script execution, media/volume controls,
+  closing apps and system power operations remain incomplete. No broader OS
+  permission follows from registering a portable executable.
 - Continuous history/memory user data and DPAPI secrets must stay local. DPAPI
   encrypted files do not migrate usefully to another Windows user; re-enter keys.
 - CUDA speech not tested, SAPI explicit output selection not supported (WinRT
@@ -181,7 +237,12 @@ Native STT cannot safely be killed; bounded shutdown discards late output.
 Tests distinguish fakes, synthetic speech, and real hardware. See TESTING.md,
 docs/SPEECH_QUALITY.md, docs/WAKE_ENGINES.md and final NEXT_STEPS.md.
 
-- Current Phase 3 suite: 444 passed in 90.79s; Ruff and 60 formatting checks pass.
+- Phase 4 baseline: 444 passed in 94.16s before new action changes. A later selected
+  action-module suite passed 354 tests with fake OS adapters. Actual discovery
+  resolved Notepad in 0.046s and returned 90 entries in 0.204s in one measured run.
+  None proves current packaged launch, page loading or human voice acceptance.
+  Final suite/build/live records belong in NEXT_STEPS.md and TESTING.md.
+- Historical Phase 3 suite: 444 passed in 90.79s; Ruff and 60 formatting checks pass.
   Coverage includes real Qt workflow approval/resume, filesystem outcomes,
   compact geometry, drafts/selections, memory relevance, cloud isolation,
   accounting, consent and preserved voice/security regressions. Native offscreen
@@ -242,7 +303,7 @@ for local Ollama/voice. Do not put variable values, tokens or keys in this docum
 PowerShell, in the checkout (examples assume C:\Jarvis):
 
 ```powershell
-git clone -b codex/phase3-ultron https://github.com/roopawalamurtaza-droid/project-jarvis.git C:\Jarvis
+git clone -b codex/phase4-actions https://github.com/roopawalamurtaza-droid/project-jarvis.git C:\Jarvis
 cd C:\Jarvis
 .\scripts\setup.ps1
 .\.venv\Scripts\python.exe -m jarvis --data-dir .local --doctor
@@ -253,9 +314,11 @@ cd C:\Jarvis
 .\.venv\Scripts\python.exe -m ruff format --check src tests scripts
 .\.venv\Scripts\python.exe -m pip_audit --skip-editable
 .\.venv\Scripts\python.exe scripts\verify_phase3.py --data-dir .local --live
+.\.venv\Scripts\python.exe scripts\verify_phase4.py --data-dir .local --actions
 .\scripts\package.ps1
 .\dist\JARVIS\JARVIS.exe --data-dir C:\Jarvis\.local --smoke-test
 .\dist\JARVIS\JARVIS.exe --data-dir C:\Jarvis\.local --verify-phase3
+.\dist\JARVIS\JARVIS.exe --data-dir C:\Jarvis\.local --verify-phase4 --verification-actions
 .\.venv\Scripts\python.exe scripts\verify_handsfree.py --data-dir .local
 .\.venv\Scripts\python.exe scripts\verify_voice_desktop.py --data-dir .local --actions
 .\dist\JARVIS\JARVIS.exe --data-dir C:\Jarvis\.local --verify-voice-update --verification-actions
@@ -264,7 +327,7 @@ cd C:\Jarvis
 ```
 
 Run the clone command only on a new machine/empty destination. The GitHub default
-branch remains Phase 1 main; always choose codex/phase3-ultron to continue
+branch remains Phase 1 main; always choose codex/phase4-actions to continue
 this implementation. Authentication/access for another account must be granted
 by the repository owner; private source is not publicly downloadable.
 
@@ -278,6 +341,9 @@ Audio diagnostics explicitly play synthetic speech and the microphone health
 script samples/discards live input. `--actions` also launches apps under current
 permissions; omit it if launch is not desired. `--smoke-test` never records even
 when saved wake permission is on. Package the full dist\JARVIS folder, not exe alone.
+Phase 4 `--actions` / frozen `--verification-actions` explicitly launch diagnostic
+apps and browser requests. Without the action flag, discovery/UI checks do not
+establish execution acceptance. Read NEXT_STEPS.md for their actual run results.
 
 ## Security invariants
 
@@ -290,6 +356,12 @@ expire, and are cancelled across restart/stop. Never widen roots to make a demo 
 Cloud consent/model isolation and untrusted memory/user references must remain.
 Audio queues/durations and context/output/file/body limits must remain bounded.
 API listens only on loopback with bearer token, no CORS/docs/public exposure.
+Application grants bind to reviewed exact kind/target and execution revalidates
+them. Arbitrary discovered/custom EXEs start disabled; no shell/admin/script
+runner or argument-bearing shortcut execution is permitted. Unknown website
+hosts require approval; all optional model-interpreted steps require approval.
+URL checks do not certify DNS, redirects or page content. Do not upload local
+catalogs, receipts or memory to model action planning. No elevation is added.
 
 ## Transfer and preservation
 
@@ -300,7 +372,7 @@ uncommitted/untracked nonignored changes. Restore with:
 
 ```powershell
 Expand-Archive -LiteralPath .\PROJECT_JARVIS_HANDOFF.zip -DestinationPath .\handoff
-git clone -b codex/phase3-ultron .\handoff\project-jarvis.bundle .\Jarvis
+git clone -b codex/phase4-actions .\handoff\project-jarvis.bundle .\Jarvis
 cd .\Jarvis
 git status --short
 .\scripts\setup.ps1
@@ -318,16 +390,18 @@ startup. A complete build folder can be delivered separately; source is rebuilda
 1. Read final verification and build metadata; verify checkout/package commit and
    actual launch path. Keep data/settings/secrets intact. Confirm clean Git and
    successful private pushes; use archive if remote access fails.
-2. On the user's actual microphone, test wake alone, wake+command, pause/noise,
-   Chrome/VS Code approved follow-ups, compound sleep, timeout, mute/device errors
-   and speech quality. Record failures/audio only with separate user consent.
+2. Verify current Phase 4 application discovery, missing/disabled/ambiguous targets,
+   launch/window/focus evidence, combined independent/failed/dependent actions,
+   website/search handoff, approval denial and cancellation on the actual desktop.
+   On the actual microphone, repeat wake/app/browser follow-ups and sleep, then
+   timeout/mute/device errors. Record failures/audio only with separate consent.
 3. Compare a licensed dedicated Windows keyword detector with the baseline;
    measure human false accepts/rejects and long-idle CPU/RAM, then decide.
 4. Keep default half duplex. Add acoustic echo suppression only with real speaker
    testing; avoid unsupported reliability claims for stop/barge-in.
 5. Verify fresh Windows packaging, startup opt-in, uninstall/update/single-instance
    behavior; signing/installer before distribution. Run meaningful regressions.
-6. Continue the explicitly incomplete Phase 3 capabilities only as scoped,
+6. Continue the explicitly incomplete Phase 4 and Phase 3 capabilities only as scoped,
    authorized work. Preserve approvals and provider/data isolation; do not
    replace the existing application or mistake manual records for external proof.
 

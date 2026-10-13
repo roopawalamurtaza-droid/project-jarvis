@@ -64,6 +64,31 @@ class Settings(BaseModel):
     compact_always_on_top: bool = False
     desktop_context_enabled: bool = False
     speaking_style: Literal["concise", "professional", "conversational", "technical"] = "concise"
+    desktop_actions_enabled: bool = True
+    browser_enabled: bool = True
+    default_browser: Literal["default", "chrome", "edge", "firefox"] = "default"
+    default_search_engine: Literal["google", "bing", "duckduckgo", "youtube"] = "google"
+    browser_new_window: bool = False
+    preferred_websites: dict[str, str] = Field(default_factory=dict)
+    model_action_planning: bool = False
+
+    @field_validator("preferred_websites")
+    @classmethod
+    def valid_websites(cls, value):
+        from .browser_actions import KNOWN_WEBSITES, validate_external_url
+
+        if len(value) > 50:
+            raise ValueError("Use at most 50 website shortcuts")
+        normalized = {}
+        for name, target in value.items():
+            name = " ".join(name.casefold().split())
+            if not name or len(name) > 80 or any(ord(c) < 32 for c in name):
+                raise ValueError("Website shortcut names must be short readable text")
+            url = validate_external_url(target)
+            if name in KNOWN_WEBSITES and url != KNOWN_WEBSITES[name]:
+                raise ValueError("Built-in official website shortcuts cannot be retargeted")
+            normalized[name] = url
+        return normalized
 
     @field_validator("timezone")
     @classmethod

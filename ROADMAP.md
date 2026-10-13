@@ -1,11 +1,30 @@
 # Roadmap and acceptance gates
 
-## Current Phase 3 release: 0.3.0
+## Current Phase 4 source release: 0.4.0
+
+The user's Windows action directive continues the existing application on
+`codex/phase4-actions`. Implemented source adds bounded local discovery and
+reviewed application grants, native launch/focus evidence, website/search
+handoff, shared voice/text multi-command dispatch, serial dependencies, partial
+failure receipts and UI approval/cancellation/diagnostics. Optional strict model
+action proposals remain off by default and individually approved. See
+PHASE4_RELEASE.md; NEXT_STEPS.md records final source, package, hardware, test
+and successful push evidence. Code presence does not satisfy those release gates.
+
+| Gate | Current scope and required proof |
+| --- | --- |
+| Application actions | Exact installed/custom target resolution, approved launches, visible-window/focus evidence, missing/disabled/ambiguous failure cases |
+| Browser actions | Encoded HTTPS site/search handoff; page/tab/new-window observation remains incomplete |
+| Combined and voice requests | Shared dispatcher, dependencies/partial failure, approval/stop/restart safety and actual current-build hands-free check |
+| Packaging | Full frozen folder, source/build identity, preserved settings/data and current Windows diagnostic results |
+| Advanced autonomy | Page controls/research, file finding, development execution, media/power controls and unattended planning remain incomplete |
+
+## Historical Phase 3 release: 0.3.0
 
 The user's Phase 3 ULTRON protocol supersedes the original table below. Native
 design/core/compact UI, context/routine foundation, Mission Control/approvals/
 memory/system diagnostics and local bookkeeping are implemented with 444 passing
-tests. Final Windows acceptance is in NEXT_STEPS.md. Autonomous planning,
+tests. Its Windows acceptance is in NEXT_STEPS.md. Unattended autonomous planning,
 streaming, durable schedules, screenshots/clipboard, research/coding execution
 and external business integrations remain incomplete. See PHASE3_RELEASE.md.
 Original numbered plans below are historical, not completed functionality.
@@ -24,7 +43,7 @@ Original numbered plans below are historical, not completed functionality.
 
 The previous Phase 2 voice milestone delivered a packaged hands-free update and
 developer handoff; the user confirmed its live demonstration on this PC. That
-acceptance belongs to the Phase 2 builds. Current Phase 3 microphone acceptance
+acceptance belongs to the Phase 2 builds. Phase 3 microphone acceptance
 is recorded separately in NEXT_STEPS.md.
 
 Dedicated keyword detection, broad human acoustic accuracy testing, screenshot
@@ -34,7 +53,8 @@ opt-in foreground titles, inspected local routines and manual bookkeeping. The
 original Phase 2 desktop-context row above describes a broader later milestone,
 distinct from the user's Phase 2 voice work.
 Full phase acceptance is recorded in TESTING.md rather than inferred from source
-code or interface mockups. The first version uses explicit tools, not autonomous
-model action planning. Cloud credentials, monetary budgets, streaming and broader
-runtime autonomy require separate implementation/verification before enabling them.
+code or interface mockups. The first version used explicit tools. Phase 4 adds
+optional reviewed structured model proposals, not unattended action planning.
+Cloud credentials, monetary budgets, streaming and broader runtime autonomy
+require separate implementation and verification before enabling them.
 

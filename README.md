@@ -1,11 +1,20 @@
 # Project JARVIS
 
-**Current development release: 0.3.0 · Phase 3 command center.** Continue branch
-`codex/phase3-ultron` in the private repository. New native core, compact/background
-modes, Mission Control, inspected routines, project context, Memory Explorer,
-Windows measurements and an opt-in local business ledger extend repaired 0.2.1.
-See [Phase 3 delivery and limits](PHASE3_RELEASE.md) and NEXT_STEPS.md for actual
-build/verification/push records. Diagnostics identifies the running build.
+**Current source development release: 0.4.0 · Phase 4 Windows actions.** Continue
+branch `codex/phase4-actions` in the private repository. Explicit voice and text
+commands now share a local application library, launch/focus executor, website
+and search actions, and verified action receipts. The existing Phase 3 command
+center, memory, workflows and hands-free voice remain. Read
+[Phase 4 delivery and limits](PHASE4_RELEASE.md) and [NEXT_STEPS.md](NEXT_STEPS.md)
+for actual packaged identity, testing and push records. Diagnostics identifies
+the executable you are running; source edits alone do not update it.
+
+Open **Application Library** and refresh discovered apps. Inspect a disabled app's
+exact target before choosing **Review & enable**. Add an alias or favorite there;
+configure your browser and search engine in Settings. Say or type **Open Notepad**,
+**Open Chrome, VS Code and Spotify**, **Open YouTube**, **Switch to VS Code**, or
+**Search Google for Python tutorials**. Missing apps and refused actions are
+reported. Routine application requests do not require terminal instructions.
 
 Routines start disabled: inspect, enable, then Run. Ctrl+K opens commands.
 Reduced motion, compact always-on-top, response styles and foreground-title
@@ -51,8 +60,10 @@ health. Source edits require rebuilding: the launcher runs `dist\JARVIS\JARVIS.e
 The Phase 2 recognition repair was **0.2.1**, runtime source commit `d1f0fe0622a4`.
 Completed wake misses and empty results now return to listening instead of leaving
 Recognizing speech on screen; genuine pending work remains visibly pending.
-All **295 tests passed** at that checkpoint. Current Phase 3 has **444 passing
-tests**. See NEXT_STEPS.md for the current packaged identity and transfer
+All **295 tests passed** at that checkpoint. The completed Phase 3 checkpoint had
+**444 passing tests**, and the user confirmed its live voice sequence. Current
+Phase 4 results are recorded separately in [TESTING.md](TESTING.md). See
+NEXT_STEPS.md for the current packaged identity and transfer
 artifacts, and RECOGNITION_REPAIR.md for the reproduced Phase 2 failure and fix.
 The earlier 0.2.0 build passed the user's live Chrome/VS Code follow-up/sleep
 demonstration; that does not erase the subsequently reported recognition bug.
@@ -65,8 +76,14 @@ demonstration; that does not erase the subsequently reported recognition bug.
   greetings, normalized speech, speaker/rate controls and optional login startup.
 - Explicit saved memory with search, editing, deletion and export.
 - Conversation history saved only when enabled, with retention and deletion controls.
-- Five tools: list a folder, read UTF-8 text, open Explorer, launch a supported app,
-  and create a directory after approval.
+- Local application discovery, exact aliases, favorites, portable-app registration,
+  scoped target permissions, launch and verified foreground focus.
+- Website/search launches in a configured browser with safely encoded queries.
+  Browser pages are not inspected, and search results are not completed research.
+- Ten fixed tools covering app/focus/browser/search/library/system status and
+  scoped folder listing/reading/opening/approved directory creation.
+- Bounded multi-command plans, serial dependencies, partial failure receipts and
+  cancellation, with optional AI action proposals that require step-by-step approval.
 - Task state, approval/rejection/cancellation, audit history and emergency stop.
 - Current-user Windows DPAPI credential protection.
 - Native desktop, compact floating view and system tray controls.
@@ -76,18 +93,17 @@ demonstration; that does not erase the subsequently reported recognition bug.
 - Opt-in local inventory/order ledger with explicit manual payment and fulfillment records.
 - Optional bearer-authenticated API on `127.0.0.1`; disabled unless started explicitly.
 
-Actions use **Mission Control** or exact commands such as:
+Use natural requests in **Assistant**, and review pending approvals, actual
+results, errors and cancellation in **Mission Control**. **And open VS Code**
+uses the same engine as a typed command. **Open my Downloads folder** still needs
+that folder in your permitted roots; saved projects use a single absolute path.
 
-```text
-/tool open_app {"app":"vscode"}
-/remember preferences editor VS Code
-```
-
-Exact human requests such as **Open Chrome**, **And open VS Code**, or **Open my
-downloads folder** route through the existing permission engine. Downloads must
-be in a permitted folder; saved projects can contain a single absolute folder path.
-Model output never executes itself. Approvals are reviewed in Mission Control. Read
-results remain local and are not added to cloud chat.
+Manual mode asks before state changes. Unknown website hosts also need approval.
+AI action proposals are off by default; enabling them still requires approval of
+every exact step. Model prose never executes itself. Receipts distinguish an
+accepted launch, a visible app window and verified focus. Browser page loading,
+active tabs and requested new-window behavior are not verified. Local file/tool
+results and the app catalog are not uploaded to cloud chat.
 
 ## Development
 
@@ -95,7 +111,9 @@ results remain local and are not added to cloud chat.
 .\scripts\setup.ps1
 .\.venv\Scripts\python.exe -m pytest -q
 .\.venv\Scripts\python.exe -m ruff check src tests scripts
+.\.venv\Scripts\python.exe -m ruff format --check src tests scripts
 .\.venv\Scripts\python.exe -m jarvis --doctor
+.\.venv\Scripts\python.exe scripts\verify_phase4.py --data-dir .local --actions
 .\scripts\package.ps1
 ```
 
@@ -103,12 +121,15 @@ See [SETUP.md](SETUP.md), [SECURITY.md](SECURITY.md), [TESTING.md](TESTING.md),
 [ARCHITECTURE.md](ARCHITECTURE.md), and [NEXT_STEPS.md](NEXT_STEPS.md).
 Read [PROJECT_HANDOFF.md](PROJECT_HANDOFF.md) first when continuing development.
 Private repository: https://github.com/roopawalamurtaza-droid/project-jarvis,
-branch `codex/phase3-ultron`. The handoff records actual transfer/build status.
+branch `codex/phase4-actions`. The handoff records actual transfer/build status.
 `uv.lock` pins the complete dependency graph. No real credentials, recordings,
 local databases, downloaded model files, or build output are committed.
 
-This is a development release. Screen vision, browser control, project test/build
-execution, durable scheduling, external business integrations and remote access
-remain incomplete. The local ledger does not verify or move money. Cloud
-providers still require live credential-based verification.
+This is a development release. Advanced browser reading/clicking/form automation,
+live research, screen vision, project test/build execution, arbitrary file finding,
+media/system power controls, durable scheduling, external business integrations
+and remote access remain incomplete. The local ledger does not verify or move
+money. Cloud providers still require live credential-based verification. The
+Phase 4 diagnostic action flag launches test apps and browser requests; omit it
+for discovery/UI-only checks.
 

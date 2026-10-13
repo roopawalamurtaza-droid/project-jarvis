@@ -12,7 +12,7 @@ from types import SimpleNamespace
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 import pytest
-from PySide6.QtCore import QTimer
+from PySide6.QtCore import QCoreApplication, QEvent, QTimer
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication
 
@@ -98,6 +98,9 @@ def phase3_window(phase3_app, tmp_path, monkeypatch):
         }
 
     monkeypatch.setattr(engine.registry, "_launch", no_os_launch)
+    monkeypatch.setattr(
+        engine.registry, "_open_app", lambda app: no_os_launch([str(tmp_path / f"{app}.exe")], app)
+    )
     monkeypatch.setattr(engine.registry, "application_path", lambda app: tmp_path / f"{app}.exe")
     view = MainWindow(service, settings, store, engine)
     view._test_provider = provider
@@ -112,6 +115,7 @@ def phase3_window(phase3_app, tmp_path, monkeypatch):
     view.close()
     wait(phase3_app, lambda: not view._jobs and not view.isVisible())
     view.deleteLater()
+    QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
     phase3_app.processEvents()
     store.close()
 

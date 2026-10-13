@@ -5,7 +5,7 @@ import os
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 import pytest
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QCoreApplication, QEvent, Qt
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QLabel
 from test_desktop import app as desktop_app
@@ -22,6 +22,7 @@ def core(app):
     yield widget
     widget.close()
     widget.deleteLater()
+    QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
     app.processEvents()
 
 
@@ -124,4 +125,5 @@ def test_metric_card_keeps_external_text_literal(app):
     assert any(label.text() == value for label in labels)
     assert all(label.textFormat() == Qt.TextFormat.PlainText for label in labels)
     card.deleteLater()
+    QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
     app.processEvents()

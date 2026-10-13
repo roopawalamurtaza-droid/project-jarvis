@@ -9,7 +9,7 @@ import time
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 import pytest
-from PySide6.QtCore import QTimer
+from PySide6.QtCore import QCoreApplication, QEvent, QTimer
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication
 
@@ -40,6 +40,11 @@ def reviewed_service(tmp_path, monkeypatch):
     monkeypatch.setattr(engine.registry, "application_path", lambda app: root / f"{app}.exe")
     monkeypatch.setattr(
         engine.registry, "_launch", lambda *args: {"verified": True, "evidence": "test_launcher"}
+    )
+    monkeypatch.setattr(
+        engine.registry,
+        "_open_app",
+        lambda app: {"verified": True, "evidence": "test_launcher", "app": app},
     )
     provider = ReferenceProvider()
     service = JarvisService(settings, store, engine, provider=provider)
@@ -156,6 +161,8 @@ def reviewed_window(review_app, reviewed_service, monkeypatch):
     settle(review_app, window)
     window.close()
     settle(review_app, window)
+    window.deleteLater()
+    QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
     review_app.processEvents()
 
 

@@ -1,5 +1,53 @@
 # Verification record — 2026-10-14
 
+## Phase 4 action-engine checkpoint
+
+Current source version is 0.4.0 on `codex/phase4-actions`. The retained Phase 3
+baseline passed **444 tests in 94.16s** before the Phase 4 changes. A later selected
+Phase 4 module suite passed **354 tests** covering local catalog/aliases/grants,
+strict URL/search construction, native adapter receipt semantics, bounded plans,
+approval/restart/partial failure/cancellation and provider function-call parsing.
+Launch/focus/browser OS calls in that selected suite use fakes. Selected suites
+overlap; they are not additive and do not replace the final integrated suite.
+NEXT_STEPS.md records subsequent full-suite, lint, audit, frozen and hardware
+results with the actual executable identity. No final release result is inferred
+from this checkpoint.
+
+Actual local discovery after the bounded binary Start Menu parser repair resolved
+canonical Notepad in **0.046s** and returned **90 catalog entries in 0.204s** in one
+run. This is discovery evidence, not a launch or foreground-focus assertion.
+The catalog includes disabled discovery hints, not only authorized launch targets.
+No blocking ShellLink COM scan, argument-bearing/environment-expanded/elevated/
+installer/network shortcuts or arbitrary shell dispatch is used. Fixed supported
+Store activation still uses the intended native Windows COM API.
+
+Cloud function-call tests use mocked transport unless a later live result is
+explicitly recorded. AI proposals are disabled by default, receive only the
+explicit current request and fixed schemas, and require individual approval.
+Plaintext model success is never evidence. Browser launch tests cannot establish
+loaded pages, active tabs, redirects, new-window behavior or completed research.
+The user-confirmed 0.3.0 microphone sequence below is historical, not 0.4.0 proof.
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest -q --basetemp .local/pytest-check
+.\.venv\Scripts\python.exe -m ruff check src tests scripts
+.\.venv\Scripts\python.exe -m ruff format --check src tests scripts
+.\.venv\Scripts\python.exe -m pip_audit --skip-editable
+.\.venv\Scripts\python.exe scripts\verify_phase4.py --data-dir .local --actions
+.\dist\JARVIS\JARVIS.exe --data-dir C:\Jarvis\.local --smoke-test
+.\dist\JARVIS\JARVIS.exe --data-dir C:\Jarvis\.local --verify-phase4 --verification-actions
+.\dist\JARVIS\JARVIS.exe --data-dir C:\Jarvis\.local --verify-voice-update --verification-actions
+```
+
+The Phase 4 action flags explicitly launch diagnostic apps and browser requests
+under local permissions. Without them, the diagnostic only checks discovery/UI.
+The voice diagnostic uses generated speech and Windows playback without capturing
+the microphone. Its action flag adds authorized app launch checks. Human current-
+build voice acceptance, fresh-machine testing and broader room/noise/accent/soak
+coverage remain separate gates. See PHASE4_RELEASE.md for scope and safeguards.
+
+## Historical Phase 3 verification
+
 Phase 3 source verification: **444 passed in 90.79s** (baseline 295 passed in 39.29s).
 Ruff check and all 60 format checks pass. Actual Qt workflows/approvals/filesystem,
 memory persistence/relevance, permission/cancellation/UI draft/selection, measured
@@ -134,8 +182,10 @@ receipt; they check engine state and filesystem results.
    and compact view behave correctly on your screen.
 2. Choose the HyperX microphone, hold to speak a phrase, release, review the actual
    recognized words, send them, and judge the spoken answer's audibility.
-3. Open Notepad, Calculator and VS Code from Mission Control. Check window visibility;
-   the tool currently verifies a process or accepted launch request, not the window.
+3. Open Notepad, Calculator and VS Code, and review their actual receipts in
+   Mission Control. Phase 4 distinguishes matching visible windows, foreground
+   focus and accepted launch evidence. Verify focus refusal is reported honestly.
+   Browser launch receipts still do not prove a page loaded or a new tab appeared.
 4. Restart after saving a memory/history preference; inspect it and exercise deletion/export.
 5. Test the executable's whole folder on a clean Windows 11 machine. Models and
    credentials are separate setup steps. Packaging smoke is not a clean-install test.

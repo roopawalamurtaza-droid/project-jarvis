@@ -54,6 +54,7 @@ from PySide6.QtWidgets import (
     QSystemTrayIcon,
     QTableWidget,
     QTableWidgetItem,
+    QTabWidget,
     QTextEdit,
     QVBoxLayout,
     QWidget,
@@ -107,10 +108,12 @@ class _JobSignals(QObject):
 
 
 class _Job(QRunnable):
-    def __init__(self, action: Callable[[], Any]):
+    def __init__(self, action: Callable[[], Any], owner: QObject | None = None):
         super().__init__()
         self.action = action
-        self.signals = _JobSignals()
+        # The pool destroys its runnable on a worker. Keep the GUI-affine
+        # signal object owned by the window until deferred GUI-thread cleanup.
+        self.signals = _JobSignals(owner)
         self.cancel = threading.Event()
 
     def run(self) -> None:
@@ -235,6 +238,11 @@ class MainWindow(QMainWindow):
         self._last_latency = None
         self._awareness_data = {}
         self._context_snapshot = {}
+        self._applications: list[dict[str, Any]] = []
+        self._selected_application_id: str | None = None
+        self._pending_application_id: str | None = None
+        self._action_runs: list[dict[str, Any]] = []
+        self._action_health: dict[str, Any] = {}
         from .awareness import DesktopContextProvider, SystemMetricsProvider
         from .workflows import WorkflowEngine
 
@@ -280,6 +288,10 @@ class MainWindow(QMainWindow):
         self._system_timer.setInterval(5000)
         self._system_timer.timeout.connect(self.refresh_system)
         self._system_timer.start()
+        self._action_activity_timer = QTimer(self)
+        self._action_activity_timer.setInterval(1000)
+        self._action_activity_timer.timeout.connect(self._refresh_active_actions)
+        self._action_activity_timer.start()
         shortcut = QShortcut(QKeySequence("Ctrl+K"), self)
         shortcut.activated.connect(self.command_palette)
         self._palette_shortcut = shortcut
@@ -312,6 +324,7 @@ class MainWindow(QMainWindow):
             "System",
             "Diagnostics",
             "Business",
+            "Application Library",
         )
         for index, title in enumerate(self.page_titles):
             button = QPushButton(title)
@@ -355,6 +368,7 @@ class MainWindow(QMainWindow):
         self.pages.addWidget(self._system_page())
         self.pages.addWidget(self._diagnostics_page())
         self.pages.addWidget(self._business_page())
+        self.pages.addWidget(self._applications_page())
         main.addWidget(self.pages, 1)
         main.addWidget(self.status_label)
         outer.addLayout(main, 1)
@@ -462,13 +476,19 @@ class MainWindow(QMainWindow):
         self.tool_choice.addItem("Open a folder", "open_folder")
         self.tool_choice.addItem("Open an application", "open_app")
         self.tool_choice.addItem("Create a folder", "create_directory")
+        self.tool_choice.addItem("Focus an application", "focus_app")
+        self.tool_choice.addItem("Open a website", "open_website")
+        self.tool_choice.addItem("Search the web", "search_web")
+        self.tool_choice.addItem("List installed applications", "list_applications")
+        self.tool_choice.addItem("Measure system status", "get_system_status")
         self.tool_choice.currentIndexChanged.connect(self._tool_changed)
         action_row.addWidget(self.tool_choice)
         self.tool_path = QLineEdit()
         self.tool_path.setPlaceholderText("Full path inside a permitted folder")
         action_row.addWidget(self.tool_path, 1)
         self.tool_app = QComboBox()
-        self.tool_app.addItems(["notepad", "calculator", "vscode", "chrome"])
+        self.tool_app.setEditable(True)
+        self.tool_app.addItems(["notepad", "calculator", "vscode", "chrome", "edge", "firefox"])
         self.tool_app.hide()
         action_row.addWidget(self.tool_app, 1)
         self.action_button = _button("Submit action", self.submit_action, kind="Primary")
@@ -494,7 +514,32 @@ class MainWindow(QMainWindow):
         split = QSplitter(Qt.Orientation.Vertical)
         split.addWidget(self.task_table)
         split.addWidget(self.task_detail)
-        layout.addWidget(split, 1)
+        tabs = QTabWidget()
+        tabs.addTab(split, "Tasks & approvals")
+        receipts = QWidget()
+        receipt_layout = QVBoxLayout(receipts)
+        receipt_layout.addWidget(
+            _label(
+                "Action plans show exact targets and Windows receipts. Browser content is not inspected.",
+                "Muted",
+                True,
+            )
+        )
+        self.action_run_table = _table(["Request", "State", "Progress"])
+        self.action_run_table.itemSelectionChanged.connect(self._select_action_run)
+        self.action_run_detail = QPlainTextEdit()
+        self.action_run_detail.setReadOnly(True)
+        receipt_split = QSplitter(Qt.Orientation.Vertical)
+        receipt_split.addWidget(self.action_run_table)
+        receipt_split.addWidget(self.action_run_detail)
+        receipt_layout.addWidget(receipt_split, 1)
+        self.cancel_action_run_button = _button(
+            "Cancel selected plan", self.cancel_action_run, kind="Danger"
+        )
+        self.cancel_action_run_button.setEnabled(False)
+        receipt_layout.addWidget(self.cancel_action_run_button)
+        tabs.addTab(receipts, "Action plan receipts")
+        layout.addWidget(tabs, 1)
         row = QHBoxLayout()
         self.approve_button = _button(
             "Approve selected", lambda: self.task_operation("approve"), kind="Primary"
@@ -746,6 +791,32 @@ class MainWindow(QMainWindow):
             ["concise", "professional", "conversational", "technical"]
         )
         self.speaking_style_choice.setCurrentText(self.settings.speaking_style)
+        self.desktop_actions_check = QCheckBox("Allow explicit application and window actions")
+        self.desktop_actions_check.setChecked(
+            getattr(self.settings, "desktop_actions_enabled", True)
+        )
+        self.browser_actions_check = QCheckBox(
+            "Allow explicitly requested website and search launches"
+        )
+        self.browser_actions_check.setChecked(getattr(self.settings, "browser_enabled", True))
+        self.browser_choice = QComboBox()
+        self.browser_choice.addItems(["default", "chrome", "edge", "firefox"])
+        self.browser_choice.setCurrentText(getattr(self.settings, "default_browser", "default"))
+        self.search_engine_choice = QComboBox()
+        self.search_engine_choice.addItems(["google", "bing", "duckduckgo", "youtube"])
+        self.search_engine_choice.setCurrentText(
+            getattr(self.settings, "default_search_engine", "google")
+        )
+        self.browser_window_check = QCheckBox("Request a new window for named browsers")
+        self.browser_window_check.setChecked(getattr(self.settings, "browser_new_window", False))
+        self.model_actions_check = QCheckBox(
+            "Allow the selected AI to propose scoped actions · always review before execution"
+        )
+        self.model_actions_check.setChecked(getattr(self.settings, "model_action_planning", False))
+        self.website_aliases_edit = QPlainTextEdit(
+            json.dumps(getattr(self.settings, "preferred_websites", {}), ensure_ascii=False)
+        )
+        self.website_aliases_edit.setMaximumHeight(85)
         fields = [
             ("AI provider", self.provider_choice),
             ("Model", self.model_edit),
@@ -790,6 +861,13 @@ class MainWindow(QMainWindow):
             ("Compact window", self.on_top_check),
             ("Desktop context permission", self.desktop_context_check),
             ("Response style", self.speaking_style_choice),
+            ("Desktop action permission", self.desktop_actions_check),
+            ("Browser action permission", self.browser_actions_check),
+            ("Preferred browser", self.browser_choice),
+            ("Search engine", self.search_engine_choice),
+            ("Browser window", self.browser_window_check),
+            ("AI action proposals", self.model_actions_check),
+            ("Website aliases (JSON dictionary)", self.website_aliases_edit),
         ]
         for title, field in fields:
             form.addRow(title, field)
@@ -846,6 +924,10 @@ class MainWindow(QMainWindow):
             button.setChecked(i == index)
         if index == 6:
             self.refresh_system()
+        elif index == 9:
+            self.refresh_applications()
+        elif index == 7:
+            self.refresh_action_health()
 
     def _workflows_page(self) -> QWidget:
         scroll = QScrollArea()
@@ -970,6 +1052,12 @@ class MainWindow(QMainWindow):
         layout.addWidget(_button("Run startup health check", self.run_health_check))
         self.ai_diagnostics = _label("No provider request measured in this window.", "Status", True)
         layout.addWidget(self.ai_diagnostics)
+        self.action_diagnostics = QPlainTextEdit()
+        self.action_diagnostics.setReadOnly(True)
+        self.action_diagnostics.setPlaceholderText(
+            "Open Diagnostics or run the startup health check to inspect Windows, application and browser status."
+        )
+        layout.addWidget(self.action_diagnostics, 1)
         layout.addWidget(
             _label(
                 "Voice playback animation reflects the Windows speech engine state. This engine does not expose synthesized PCM amplitude; the display does not claim an audio waveform.",
@@ -979,6 +1067,392 @@ class MainWindow(QMainWindow):
         )
         layout.addStretch()
         return page
+
+    def _applications_page(self) -> QWidget:
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        page = QWidget()
+        layout = QVBoxLayout(page)
+        layout.addWidget(_label("LOCAL APPLICATION LIBRARY", "Muted"))
+        layout.addWidget(
+            _label(
+                "Discovery reads installed application metadata locally. New arbitrary applications stay disabled until you review their exact target. Aliases and favorites never authorize execution.",
+                "Muted",
+                True,
+            )
+        )
+        row = QHBoxLayout()
+        self.application_search = QLineEdit()
+        self.application_search.setPlaceholderText("Search names and aliases")
+        self.application_search.returnPressed.connect(self.refresh_applications)
+        row.addWidget(self.application_search, 1)
+        row.addWidget(_button("Search", self.refresh_applications))
+        self.application_refresh_button = _button(
+            "Refresh installed apps", lambda: self.refresh_applications(rescan=True)
+        )
+        row.addWidget(self.application_refresh_button)
+        layout.addLayout(row)
+        self.application_notice = _label("Application catalog has not been read.", "Status", True)
+        layout.addWidget(self.application_notice)
+        self.application_table = _table(["Application", "Permission", "Favorite", "Source"])
+        self.application_table.setMinimumHeight(160)
+        self.application_table.itemSelectionChanged.connect(self._select_application)
+        layout.addWidget(self.application_table)
+        self.application_detail = QPlainTextEdit()
+        self.application_detail.setReadOnly(True)
+        self.application_detail.setMaximumHeight(170)
+        self.application_detail.setPlaceholderText(
+            "Select an application to inspect its executable or packaged identity."
+        )
+        layout.addWidget(self.application_detail)
+        controls = QHBoxLayout()
+        self.application_enable_button = _button(
+            "Review & enable", self.toggle_application_permission
+        )
+        self.application_favorite_button = _button("Favorite", self.toggle_application_favorite)
+        self.application_launch_button = _button(
+            "Request launch", self.launch_library_application, kind="Primary"
+        )
+        for button in (
+            self.application_enable_button,
+            self.application_favorite_button,
+            self.application_launch_button,
+        ):
+            button.setEnabled(False)
+            controls.addWidget(button)
+        layout.addLayout(controls)
+        alias = QHBoxLayout()
+        self.application_alias = QLineEdit()
+        self.application_alias.setPlaceholderText("Exact spoken alias, for example editor")
+        alias.addWidget(self.application_alias, 1)
+        self.application_alias_add_button = _button(
+            "Add alias", lambda: self.application_alias_operation(False)
+        )
+        self.application_alias_remove_button = _button(
+            "Remove alias", lambda: self.application_alias_operation(True)
+        )
+        alias.addWidget(self.application_alias_add_button)
+        alias.addWidget(self.application_alias_remove_button)
+        layout.addLayout(alias)
+        form = QFormLayout()
+        self.custom_application_name = QLineEdit()
+        self.custom_application_path = QLineEdit()
+        self.custom_application_path.setPlaceholderText("Absolute path to a local .exe")
+        form.addRow("Custom application name", self.custom_application_name)
+        form.addRow("Executable", self.custom_application_path)
+        layout.addLayout(form)
+        self.application_register_button = _button(
+            "Register disabled application", self.register_application
+        )
+        layout.addWidget(self.application_register_button)
+        layout.addStretch()
+        scroll.setWidget(page)
+        return scroll
+
+    def _application_registry(self):
+        return getattr(getattr(self.engine, "registry", None), "applications", None)
+
+    def _selected_application(self):
+        row = self.application_table.currentRow()
+        return (
+            self._applications[row]
+            if self.application_table.selectionModel().hasSelection()
+            and 0 <= row < len(self._applications)
+            else None
+        )
+
+    def _application_mutation_allowed(self):
+        if self._transition_busy():
+            return False
+        if self._stopped or "emergency-stop" in self._jobs:
+            self._status(
+                "Emergency stop is active. Resume before changing application permissions."
+            )
+            return False
+        if self._application_registry() is None:
+            self._status("Application discovery is unavailable in this service.")
+            return False
+        return True
+
+    def refresh_applications(self, *, rescan=False):
+        registry = self._application_registry()
+        if registry is None:
+            self.application_notice.setText("Application discovery is unavailable in this service.")
+            self._select_application()
+            return
+        if rescan and not self._application_mutation_allowed():
+            return
+        query = self.application_search.text().strip()
+
+        def fetch():
+            if rescan:
+                registry.refresh()
+            return {"applications": registry.list_apps(query), "health": registry.health()}
+
+        self._run("application-read", fetch, self._show_applications)
+
+    def _show_applications(self, data):
+        selected = self._pending_application_id or self._selected_application_id
+        self._pending_application_id = None
+        previous = self._selected_application()
+        if selected is None and previous:
+            selected = previous["id"]
+        self._applications = data.get("applications", [])
+        self.application_table.blockSignals(True)
+        self.application_table.clearSelection()
+        self.application_table.setRowCount(len(self._applications))
+        selected_row = -1
+        for row, record in enumerate(self._applications):
+            for column, value in enumerate(
+                (
+                    record["name"],
+                    "Enabled" if record.get("enabled") else "Disabled",
+                    "Yes" if record.get("favorite") else "",
+                    record.get("source", ""),
+                )
+            ):
+                self.application_table.setItem(row, column, QTableWidgetItem(str(value)))
+            if record["id"] == selected:
+                selected_row = row
+        if selected_row >= 0:
+            self.application_table.selectRow(selected_row)
+        self.application_table.blockSignals(False)
+        health = data.get("health", {})
+        self.application_notice.setText(
+            f"{len(self._applications)} matching local applications · {health.get('enabled', 0)} enabled in catalog. Discovery does not prove an app is currently running."
+        )
+        self._selected_application_id = selected if selected_row >= 0 else None
+        self._select_application()
+
+    def _select_application(self):
+        record = self._selected_application()
+        self._selected_application_id = record.get("id") if record else None
+        self.application_detail.setPlainText(
+            json.dumps(record, indent=2, ensure_ascii=False, default=str) if record else ""
+        )
+        busy = (
+            self._closing
+            or self._stopped
+            or any(
+                name in self._jobs for name in ("settings", "application-write", "emergency-stop")
+            )
+        )
+        selected = bool(record) and not busy
+        self.application_enable_button.setText(
+            "Disable" if record and record.get("enabled") else "Review & enable"
+        )
+        self.application_favorite_button.setText(
+            "Remove favorite" if record and record.get("favorite") else "Favorite"
+        )
+        for button in (
+            self.application_enable_button,
+            self.application_favorite_button,
+            self.application_alias_add_button,
+            self.application_alias_remove_button,
+        ):
+            button.setEnabled(selected)
+        self.application_launch_button.setEnabled(selected and bool(record.get("enabled")))
+        self.application_register_button.setEnabled(
+            not busy and self._application_registry() is not None
+        )
+        self.application_refresh_button.setEnabled(
+            not busy and self._application_registry() is not None
+        )
+
+    def _application_changed(self, record):
+        self._pending_application_id = (
+            record.get("id") if isinstance(record, dict) else self._selected_application_id
+        )
+        self._status("Application library updated locally · launch permissions still apply")
+        self.refresh_applications()
+
+    def register_application(self):
+        if not self._application_mutation_allowed():
+            return
+        name, path = (
+            self.custom_application_name.text().strip(),
+            self.custom_application_path.text().strip(),
+        )
+        registry = self._application_registry()
+        self._run(
+            "application-write",
+            lambda: registry.register_custom(name, path),
+            self._application_changed,
+        )
+
+    def toggle_application_permission(self):
+        if not self._application_mutation_allowed():
+            return
+        record = self._selected_application()
+        if not record:
+            return
+        enabled = not record.get("enabled", False)
+        reviewed_target = (record.get("kind"), record.get("target"))
+        if enabled:
+            answer = QMessageBox.question(
+                self,
+                "Enable application launch",
+                f"Allow explicitly requested launches of {record['name']}?\n\nExact {record.get('kind', 'application')} target:\n{record.get('target', '')}\n\nAn executable runs with your Windows account permissions. Review this target before enabling it.",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No,
+            )
+            if answer != QMessageBox.StandardButton.Yes:
+                return
+            if not self._application_mutation_allowed():
+                return
+        registry, identity = self._application_registry(), record["id"]
+
+        def change_permission():
+            if enabled:
+                current = next(
+                    (item for item in registry.list_apps() if item["id"] == identity), None
+                )
+                if (
+                    current is None
+                    or (current.get("kind"), current.get("target")) != reviewed_target
+                ):
+                    raise PermissionError(
+                        "The application target changed after review. Refresh and inspect it again."
+                    )
+            return registry.set_enabled(
+                identity,
+                enabled,
+                expected_kind=reviewed_target[0] if enabled else None,
+                expected_target=reviewed_target[1] if enabled else None,
+            )
+
+        self._run(
+            "application-write",
+            change_permission,
+            self._application_changed,
+        )
+
+    def toggle_application_favorite(self):
+        if not self._application_mutation_allowed():
+            return
+        record = self._selected_application()
+        if record:
+            registry, identity, favorite = (
+                self._application_registry(),
+                record["id"],
+                not record.get("favorite", False),
+            )
+            self._run(
+                "application-write",
+                lambda: registry.set_favorite(identity, favorite),
+                self._application_changed,
+            )
+
+    def application_alias_operation(self, remove=False):
+        if not self._application_mutation_allowed():
+            return
+        record, alias = self._selected_application(), self.application_alias.text().strip()
+        if record:
+            registry, identity = self._application_registry(), record["id"]
+            operation = registry.remove_alias if remove else registry.set_alias
+            self._run(
+                "application-write", lambda: operation(identity, alias), self._application_changed
+            )
+
+    def launch_library_application(self):
+        if not self._application_mutation_allowed():
+            return
+        record = self._selected_application()
+        if record and record.get("enabled"):
+            identity = record["id"]
+            self._run(
+                "action",
+                lambda: self.engine.submit("open_app", {"app": identity}),
+                self._task_result,
+            )
+
+    def _selected_action_run(self):
+        row = self.action_run_table.currentRow()
+        return (
+            self._action_runs[row]
+            if self.action_run_table.selectionModel().hasSelection()
+            and 0 <= row < len(self._action_runs)
+            else None
+        )
+
+    def _select_action_run(self):
+        run = self._selected_action_run()
+        self.action_run_detail.setPlainText(
+            json.dumps(run, indent=2, ensure_ascii=False, default=str) if run else ""
+        )
+        self.cancel_action_run_button.setEnabled(
+            bool(run and run.get("state") in {"running", "awaiting_approval"}) and not self._closing
+        )
+
+    def cancel_action_run(self):
+        run, actions = self._selected_action_run(), getattr(self.service, "actions", None)
+        if run and actions:
+            identity = run["id"]
+            self._run("action-cancel", lambda: actions.cancel(identity), lambda _: self.refresh())
+
+    def _show_action_runs(self, runs):
+        previous = self._selected_action_run()
+        identity = previous.get("id") if previous else None
+        self._action_runs = runs
+        self.action_run_table.blockSignals(True)
+        self.action_run_table.clearSelection()
+        self.action_run_table.setRowCount(len(runs))
+        for row, run in enumerate(runs):
+            for column, value in enumerate(
+                (
+                    run.get("name", "Requested actions"),
+                    run.get("state", "unknown"),
+                    f"{run.get('step_index', 0)} / {len(run.get('steps', []))}",
+                )
+            ):
+                self.action_run_table.setItem(row, column, QTableWidgetItem(str(value)))
+            if run["id"] == identity:
+                self.action_run_table.selectRow(row)
+        self.action_run_table.blockSignals(False)
+        self._select_action_run()
+
+    def _refresh_active_actions(self):
+        if self._closing or not any(
+            name in self._jobs for name in ("chat", "action", "task-operation", "action-cancel")
+        ):
+            return
+        actions = getattr(self.service, "actions", None)
+
+        def fetched(data):
+            self._show_task_records(data["tasks"])
+            self._show_action_runs(data["action_runs"])
+
+        self._run(
+            "action-progress",
+            lambda: {
+                "tasks": self.store.tasks(),
+                "action_runs": actions.history() if actions else [],
+            },
+            fetched,
+        )
+
+    def _read_action_health(self):
+        registry = getattr(self.engine, "registry", None)
+        health = {}
+        for name in ("windows", "applications", "browser"):
+            component = getattr(registry, name, None)
+            health[name] = (
+                component.health()
+                if component and hasattr(component, "health")
+                else {"status": "unavailable"}
+            )
+        health["model_action_planning"] = getattr(self.settings, "model_action_planning", False)
+        health["desktop_actions_enabled"] = getattr(self.settings, "desktop_actions_enabled", True)
+        return health
+
+    def refresh_action_health(self):
+        self._run("action-health", self._read_action_health, self._show_action_health)
+
+    def _show_action_health(self, health):
+        self._action_health = health
+        self.action_diagnostics.setPlainText(
+            json.dumps(health, indent=2, ensure_ascii=False, default=str)
+        )
 
     def _business_page(self) -> QWidget:
         from .business import sample_summary
@@ -1339,7 +1813,7 @@ class MainWindow(QMainWindow):
 
         self._overlay_dismissed = False
         self.ambient_overlay = QFrame(
-            None,
+            self,
             Qt.WindowType.Tool
             | Qt.WindowType.FramelessWindowHint
             | Qt.WindowType.WindowStaysOnTopHint
@@ -1608,6 +2082,7 @@ class MainWindow(QMainWindow):
             self._status("Startup health checked · see build and voice details in Settings")
 
         self._run("health", lambda: startup_health(self.settings.model_copy(deep=True)), checked)
+        self.refresh_action_health()
 
     def _transition_busy(self) -> bool:
         if any(name in self._jobs for name in ("settings", "history", "history-delete")):
@@ -1646,7 +2121,7 @@ class MainWindow(QMainWindow):
     ) -> _Job | None:
         if name in self._jobs or self._closing:
             return None
-        job = _Job(action)
+        job = _Job(action, self)
         self._jobs[name] = job
 
         def done(result: Any) -> None:
@@ -1661,10 +2136,16 @@ class MainWindow(QMainWindow):
         job.signals.failed.connect(failed)
         job.signals.finished.connect(lambda: self._finish_job(name))
         self._pool.start(job)
+        if name in {"application-write", "settings", "emergency-stop"} and hasattr(
+            self, "application_table"
+        ):
+            self._select_application()
         return job
 
     def _finish_job(self, name: str) -> None:
-        self._jobs.pop(name, None)
+        job = self._jobs.pop(name, None)
+        if job is not None:
+            job.signals.deleteLater()
         if name == "chat":
             self._chat_cancel = None
             self.send_button.setEnabled(not self._closing)
@@ -1675,6 +2156,8 @@ class MainWindow(QMainWindow):
             self.mic_button.setEnabled(not self._closing)
         if name == "settings":
             self.save_settings_button.setEnabled(not self._closing)
+        if name in {"application-write", "settings", "emergency-stop", "resume"}:
+            self._select_application()
         if self._closing:
             self._poll_shutdown()
         elif hasattr(self, "voice_controller"):
@@ -1769,24 +2252,41 @@ class MainWindow(QMainWindow):
             self.voice_controller.interrupted()
         if not self._closing:
             self._run("workflow-interrupt", self.workflows.emergency_stop)
+            actions = getattr(self.service, "actions", None)
+            if actions:
+                self._run("action-interrupt", actions.emergency_stop)
         self._status("Interrupted · active requests stop at the next safe boundary")
 
     def _tool_changed(self) -> None:
-        app = self.tool_choice.currentData() == "open_app"
+        tool = self.tool_choice.currentData()
+        app = tool in {"open_app", "focus_app"}
         self.tool_app.setVisible(app)
-        self.tool_path.setVisible(not app)
+        self.tool_path.setVisible(
+            not app and tool not in {"list_applications", "get_system_status"}
+        )
+        self.tool_path.setPlaceholderText(
+            "Public HTTPS URL or approved website alias"
+            if tool == "open_website"
+            else "Search words (opened in your preferred browser)"
+            if tool == "search_web"
+            else "Full path inside a permitted folder"
+        )
 
     def submit_action(self) -> None:
         if self._transition_busy():
             return
         tool = self.tool_choice.currentData()
-        args = (
-            {"app": self.tool_app.currentText()}
-            if tool == "open_app"
-            else {"path": self.tool_path.text().strip()}
-        )
-        if tool != "open_app" and not args["path"]:
-            self._status("Enter a full path for this action.")
+        if tool in {"open_app", "focus_app"}:
+            args = {"app": self.tool_app.currentText().strip()}
+        elif tool in {"list_applications", "get_system_status"}:
+            args = {}
+        else:
+            key = (
+                "target" if tool == "open_website" else "query" if tool == "search_web" else "path"
+            )
+            args = {key: self.tool_path.text().strip()}
+        if args and not next(iter(args.values())):
+            self._status("Enter a target for this action.")
             return
         if self._stopped:
             self._status("Emergency stop is active. Resume before submitting actions.")
@@ -1807,7 +2307,11 @@ class MainWindow(QMainWindow):
 
     def _selected_task(self) -> dict[str, Any] | None:
         row = self.task_table.currentRow()
-        return self._tasks[row] if 0 <= row < len(self._tasks) else None
+        return (
+            self._tasks[row]
+            if self.task_table.selectionModel().hasSelection() and 0 <= row < len(self._tasks)
+            else None
+        )
 
     def _select_task(self) -> None:
         task = self._selected_task()
@@ -1841,6 +2345,9 @@ class MainWindow(QMainWindow):
         def operate():
             result = getattr(self.engine, operation)(task_id)
             self.workflows.resume_for_task(task_id)
+            actions = getattr(self.service, "actions", None)
+            if actions:
+                actions.resume_for_task(task_id)
             return result
 
         self._run("task-operation", operate, self._task_result)
@@ -1878,6 +2385,7 @@ class MainWindow(QMainWindow):
         session = self.session_id or "default"
 
         def fetch() -> dict[str, Any]:
+            actions = getattr(self.service, "actions", None)
             return {
                 "tasks": self.store.tasks(),
                 "memories": self.store.memories(query),
@@ -1887,11 +2395,12 @@ class MainWindow(QMainWindow):
                 "workflow_runs": self.workflows.runs(),
                 "projects": self.workflows.projects(),
                 "context": self.workflows.session_context(session),
+                "action_runs": actions.history() if actions else [],
             }
 
         self._run("refresh", fetch, self._show_data)
 
-    def _show_data(self, data: dict[str, Any]) -> None:
+    def _show_task_records(self, tasks):
         selected_task = self._selected_task()
         task_id = self._last_task_id or (selected_task.get("id") if selected_task else None)
         self._last_task_id = None
@@ -1899,9 +2408,10 @@ class MainWindow(QMainWindow):
             self._live_task_results.get(task["id"], task)
             if self._live_task_results.get(task["id"], {}).get("state") == task["state"]
             else task
-            for task in data["tasks"]
+            for task in tasks
         ]
         self.task_table.blockSignals(True)
+        self.task_table.clearSelection()
         self.task_table.setRowCount(len(self._tasks))
         task_row = -1
         for row, task in enumerate(self._tasks):
@@ -1912,6 +2422,10 @@ class MainWindow(QMainWindow):
         if task_row >= 0:
             self.task_table.selectRow(task_row)
         self.task_table.blockSignals(False)
+        self._select_task()
+
+    def _show_data(self, data: dict[str, Any]) -> None:
+        self._show_task_records(data["tasks"])
         selected_memory_id = self._selected_memory
         self._memories = data["memories"]
         self.memory_table.blockSignals(True)
@@ -1937,6 +2451,7 @@ class MainWindow(QMainWindow):
             item.setData(Qt.ItemDataRole.UserRole, session_id)
         self._select_task()
         self._show_workflow_data(data)
+        self._show_action_runs(data.get("action_runs", []))
 
     def _show_workflow_data(self, data):
         self._context_snapshot = data.get("context", {})
@@ -2095,10 +2610,9 @@ class MainWindow(QMainWindow):
         values = self.settings.model_dump()
         try:
             pronunciations = json.loads(self.pronunciation_edit.toPlainText())
+            websites = json.loads(self.website_aliases_edit.toPlainText())
         except ValueError:
-            self._status(
-                'Pronunciations must be a JSON dictionary, for example {"JARVIS": "Jarvis"}.'
-            )
+            self._status("Pronunciations and website aliases must be valid JSON dictionaries.")
             return
         values.update(
             provider=self.provider_choice.currentText(),
@@ -2147,6 +2661,13 @@ class MainWindow(QMainWindow):
             compact_always_on_top=self.on_top_check.isChecked(),
             desktop_context_enabled=self.desktop_context_check.isChecked(),
             speaking_style=self.speaking_style_choice.currentText(),
+            desktop_actions_enabled=self.desktop_actions_check.isChecked(),
+            browser_enabled=self.browser_actions_check.isChecked(),
+            default_browser=self.browser_choice.currentText(),
+            default_search_engine=self.search_engine_choice.currentText(),
+            browser_new_window=self.browser_window_check.isChecked(),
+            model_action_planning=self.model_actions_check.isChecked(),
+            preferred_websites=websites,
         )
         try:
             candidate = Settings.model_validate(values)
@@ -2550,6 +3071,7 @@ class MainWindow(QMainWindow):
         self.ambient_overlay.hide()
         self._presence_timer.stop()
         self._system_timer.stop()
+        self._action_activity_timer.stop()
         # The pooled runnables retain their own signals and never destroy a live QThread.
         self.centralWidget().setEnabled(False)
         self._close_deadline = time.monotonic() + max(5.0, self.settings.request_timeout + 5)
@@ -2569,6 +3091,7 @@ class MainWindow(QMainWindow):
             self._closing = False
             self._presence_timer.start()
             self._system_timer.start()
+            self._action_activity_timer.start()
             self.centralWidget().setEnabled(True)
             self.send_button.setEnabled("chat" not in self._jobs)
             self.mic_button.setEnabled("record" not in self._jobs)

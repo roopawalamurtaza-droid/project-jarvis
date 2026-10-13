@@ -20,7 +20,26 @@ class PathArgs(BaseModel):
 
 class AppArgs(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
-    app: Literal["notepad", "calculator", "vscode", "chrome"]
+    app: str = Field(min_length=1, max_length=160)
+
+
+class WebsiteArgs(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    target: str = Field(min_length=1, max_length=4096)
+    browser: Literal["default", "chrome", "edge", "firefox"] | None = None
+    new_window: bool | None = None
+
+
+class SearchArgs(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    query: str = Field(min_length=1, max_length=500)
+    engine: Literal["google", "bing", "duckduckgo", "youtube"] | None = None
+    browser: Literal["default", "chrome", "edge", "firefox"] | None = None
+    new_window: bool | None = None
+
+
+class EmptyArgs(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
 
 
 SCHEMAS = {
@@ -29,18 +48,31 @@ SCHEMAS = {
     "open_folder": PathArgs,
     "create_directory": PathArgs,
     "open_app": AppArgs,
+    "focus_app": AppArgs,
+    "open_website": WebsiteArgs,
+    "search_web": SearchArgs,
+    "list_applications": EmptyArgs,
+    "get_system_status": EmptyArgs,
 }
-READ_ONLY = {"list_directory", "read_file"}
+READ_ONLY = {"list_directory", "read_file", "list_applications", "get_system_status"}
 SENSITIVE = {"create_directory"}
 PRIVATE_PARTS = {".git", ".codex", ".agents", ".aws", ".ssh", ".gnupg", "secrets.dpapi.json"}
 PRIVATE_SUFFIXES = {".pem", ".key", ".pfx", ".p12", ".kdbx"}
 
 
 def tool_schemas():
+    descriptions = {
+        "open_app": "Launch or focus an explicitly requested installed application, using an exact name or alias. No command-line arguments or scripts.",
+        "focus_app": "Focus an existing visible window for an exact installed application. Windows may refuse foreground focus.",
+        "open_website": "Open an explicit known site alias or public HTTPS URL in the user's browser. Unknown sites require approval. Does not read the page.",
+        "search_web": "Open a user-requested, safely encoded search in Google, Bing, DuckDuckGo or YouTube. This is browser navigation, not completed research.",
+        "list_applications": "Read the local installed application catalog, not a list of active processes.",
+        "get_system_status": "Measure actual CPU and RAM, and supported GPU metrics. Values may be unavailable.",
+    }
     return [
         {
             "name": name,
-            "description": name.replace("_", " "),
+            "description": descriptions.get(name, name.replace("_", " ")),
             "parameters": schema.model_json_schema(),
         }
         for name, schema in SCHEMAS.items()
@@ -51,6 +83,15 @@ class ToolRegistry:
     def __init__(self, settings):
         self.settings = settings
         self._children: list[subprocess.Popen] = []
+        from .applications import ApplicationRegistry
+        from .awareness import SystemMetricsProvider
+        from .browser_actions import BrowserActionService
+        from .windows_actions import WindowsActionService
+
+        self.applications = ApplicationRegistry(settings)
+        self.windows = WindowsActionService(self.applications)
+        self.browser = BrowserActionService(settings, self.windows)
+        self.metrics = SystemMetricsProvider()
 
     def scoped_path(self, raw: str) -> Path:
         if raw.startswith(("\\\\", "//")) or "\x00" in raw:
@@ -91,14 +132,75 @@ class ToolRegistry:
         if not isinstance(arguments, dict):
             raise ValueError("Tool arguments must be an object")
         validated = SCHEMAS[tool].model_validate(arguments).model_dump()
+        if tool in {"open_app", "focus_app"}:
+            from .applications import BLOCKED_EXECUTABLES, ApplicationNotFound, normalized_name
+
+            name = normalized_name(validated["app"])
+            if name.removesuffix(".exe") in BLOCKED_EXECUTABLES or any(c in name for c in "/\\:;|"):
+                raise PermissionError(
+                    "Command interpreters and arbitrary command lines are restricted"
+                )
+            # Freeze aliases to a stable catalog ID, even when disabled. Missing
+            # apps stay as explicit targets so the executor can record not-found.
+            try:
+                validated["app"] = self.applications.resolve(name)["id"]
+            except ApplicationNotFound:
+                validated["app"] = name
+        if tool == "open_website":
+            validated["target"] = self.browser.resolve_url(validated["target"])
+        if tool in {"open_website", "search_web"}:
+            validated["browser"] = validated["browser"] or self.settings.default_browser
+            if validated["new_window"] is None:
+                validated["new_window"] = self.settings.browser_new_window
+            if tool == "search_web":
+                validated["engine"] = validated["engine"] or self.settings.default_search_engine
+                if not validated["query"].strip() or any(ord(c) < 32 for c in validated["query"]):
+                    raise ValueError("Search query must be readable text")
         if "path" in validated:
             validated["path"] = str(self.scoped_path(validated["path"]))
         return validated
+
+    def requires_approval(self, tool, arguments):
+        return tool == "open_website" and self.browser.requires_approval(arguments["target"])
+
+    def authorization_snapshot(self, tool, arguments):
+        if tool in {"open_app", "focus_app"} or (
+            tool in {"open_website", "search_web"} and arguments.get("browser") != "default"
+        ):
+            from .applications import ApplicationNotFound
+
+            name = arguments["app"] if "app" in arguments else arguments["browser"]
+            try:
+                app = self.applications.resolve(name)
+                return {"id": app["id"], "target": app["target"], "kind": app["kind"]}
+            except ApplicationNotFound:
+                return {"id": name, "missing": True}
+        return None
 
     def execute(self, tool, arguments):
         args = self.validate(tool, arguments)  # revalidate immediately before execution
         if tool == "open_app":
             return self._open_app(args["app"])
+        if tool == "focus_app":
+            self._desktop_permission()
+            return self.windows.focus(args["app"])
+        if tool == "open_website":
+            return self.browser.open_website(**args)
+        if tool == "search_web":
+            return self.browser.search_web(**args)
+        if tool == "list_applications":
+            return {
+                "verified": True,
+                "applications": self.applications.list_apps(),
+                "evidence": "local_catalog",
+                "detail": "Discovery metadata, not running processes",
+            }
+        if tool == "get_system_status":
+            return {
+                "verified": True,
+                "system": self.metrics.sample().as_dict(),
+                "evidence": "system_measurement",
+            }
         path = self.scoped_path(args["path"])
         if tool == "list_directory":
             if not path.is_dir():
@@ -141,6 +243,7 @@ class ToolRegistry:
             path.mkdir(parents=False, exist_ok=True)
             return {"verified": path.is_dir(), "path": str(path)}
         if tool == "open_folder":
+            self._desktop_permission()
             if not path.is_dir():
                 raise ValueError("The selected path is not an existing directory")
             if os.name != "nt":
@@ -152,31 +255,15 @@ class ToolRegistry:
 
     def application_path(self, app):
         """Resolve an allowlisted installed application without launching it."""
-        if os.name != "nt":
-            raise RuntimeError("Desktop application launch requires Windows")
-        system = Path(os.environ.get("SystemRoot", r"C:\Windows")) / "System32"
-        candidates = {
-            "notepad": [system / "notepad.exe"],
-            "calculator": [system / "calc.exe"],
-            "chrome": [
-                Path(os.environ.get("ProgramFiles", "")) / "Google/Chrome/Application/chrome.exe",
-                Path(os.environ.get("ProgramFiles(x86)", ""))
-                / "Google/Chrome/Application/chrome.exe",
-                Path(os.environ.get("LOCALAPPDATA", "")) / "Google/Chrome/Application/chrome.exe",
-            ],
-            "vscode": [
-                Path(os.environ.get("LOCALAPPDATA", "")) / "Programs/Microsoft VS Code/Code.exe",
-                Path(os.environ.get("ProgramFiles", "")) / "Microsoft VS Code/Code.exe",
-            ],
-        }[app]
-        executable = next((candidate for candidate in candidates if candidate.is_file()), None)
-        return executable
+        return self.windows.application_path(app)
+
+    def _desktop_permission(self):
+        if not self.settings.desktop_actions_enabled:
+            raise PermissionError("Desktop actions are disabled in Settings")
 
     def _open_app(self, app):
-        executable = self.application_path(app)
-        if executable is None:
-            raise RuntimeError("Requested application is not installed at a supported location")
-        return self._launch([str(executable)], app)
+        self._desktop_permission()
+        return self.windows.launch(app)
 
     def _launch(self, argv, label):
         child = subprocess.Popen(

@@ -85,7 +85,7 @@ def test_runs_serially_with_verified_task_references_and_persistence(system):
 )
 def test_routine_rejects_unbounded_and_arbitrary_execution(system, steps):
     workflows, _, _, _, _, calls = system
-    with pytest.raises(ValueError):
+    with pytest.raises((ValueError, PermissionError)):
         workflows.create_routine("Invalid", steps)
     assert not calls
     assert workflows.routines() == []

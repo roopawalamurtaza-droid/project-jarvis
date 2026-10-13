@@ -1,5 +1,54 @@
 # Current development and transfer state — 14 October 2026
 
+## Phase 4 Windows action engine — 0.4.0
+
+Current branch **codex/phase4-actions**, extending the committed 0.3.0 checkpoint.
+Read PHASE4_RELEASE.md for architecture, exact commands, permissions and limits.
+The current work adds application discovery/aliases/target grants, native launch
+and focus verification, known HTTPS websites and encoded browser searches,
+bounded shared voice/text action plans, partial failure and one-use approvals,
+Application Library and action receipts. Optional model-interpreted proposals
+require explicit opt-in and per-step approval; ordinary explicit app/search
+commands use deterministic dispatch without a model or terminal instructions.
+
+Verified during source integration:
+
+- Phase 3 baseline: **444 passed in 94.16s**. First complete Phase 4 suite:
+  **819 passed in 124.27s**. Final suite **823 passed in 137.20s**; Ruff lint
+  and all 73 formatting checks pass. Selected suites overlap; do not add counts.
+- Repeated full runs exposed a Qt cleanup abort. A forced worker-GC regression
+  reproduced the parentless ambient overlay being collected outside the GUI
+  thread. The overlay and worker signal objects now have GUI ownership; finished
+  signals and native test widgets complete GUI-thread deferred deletion. The
+  formerly crashing regression, hidden-main-window overlay behavior, 50 focused
+  desktop/hands-free tests, then the complete 823-case suite passed afterward.
+  The hands-free recognition algorithm was not rewritten to conceal this issue.
+- Actual Windows metadata discovery: 90 entries, canonical Notepad resolution
+  0.046s, complete catalog 0.204s. Replaced blocking native shortcut inspection
+  with bounded binary parsing; unsupported links fail closed.
+- Actual native input/worker/action execution passed Notepad, Calculator, Chrome,
+  VS Code, Explorer and Store Spotify with matching visible-window evidence.
+  Combined Chrome/search, Google/YouTube search, official Python/GitHub websites,
+  and supported new-tab launch fallback completed. These URL tasks verify
+  browser launch requests, not page contents, active tabs or completed research.
+- Missing-app requests reported failure; a three-app request with a missing
+  middle app reported partial success and completed both independent apps.
+  Explicit Chrome focus was refused by Windows and reported truthfully; an
+  already visible app still satisfies an ordinary open request without spawning
+  a duplicate. Downloads remained denied outside current allowed roots.
+- Native action check: 566 GUI ticks, maximum gap 0.141s in one source run;
+  not a general performance guarantee. Source check uses generated isolated
+  task data and no microphone, cloud or real financial data.
+- Real local qwen3:8b returned a structured `open_app` proposal for Notepad
+  with registered schemas. This request executed nothing. Cloud adapters use
+  mocked transport tests; current AI action planning preference stays off.
+
+The old JARVIS 0.3.0 window was closed gracefully for replacement and speech
+diagnostics; its complete folder is preserved at `transfer/phase3-build-0.3.0`.
+Other user apps were not closed. Final build identity, voice checks,
+launch, human acceptance, push and transfer records follow after verification.
+The historical Phase 3 and Phase 2 records below remain distinct.
+
 ## Phase 3 command center — 0.3.0
 
 Current branch: **codex/phase3-ultron**. Read PHASE3_RELEASE.md. Baseline 295

@@ -29,6 +29,12 @@ def local_command(message: str, settings, store) -> tuple[str, dict] | str | Non
             return "open_app", {"app": apps[name]}
         if name in {"downloads", "downloads folder"}:
             return "open_folder", {"path": str(Path.home() / "Downloads")}
+        if name in {"documents", "documents folder", "desktop", "desktop folder"}:
+            return "open_folder", {
+                "path": str(
+                    Path.home() / ("Documents" if name.startswith("documents") else "Desktop")
+                )
+            }
         if name in {"development environment", "flutter project"}:
             return "Which application or saved project would you like to open?"
         # Saved project paths remain subject to the same path checks and approvals.

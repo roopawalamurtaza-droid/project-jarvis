@@ -33,8 +33,10 @@ class TaskEngine:
             "task_state", {"task_id": task["id"], "tool": task["tool"], "state": task["state"]}
         )
 
-    def submit(self, tool, arguments):
+    def submit(self, tool, arguments, *, require_approval=False):
         with self._lock:
+            if type(require_approval) is not bool:
+                raise ValueError("Approval must be Boolean")
             if self._stopped.is_set():
                 raise RuntimeError("Emergency stop active; explicitly resume before new actions")
             try:
@@ -56,10 +58,14 @@ class TaskEngine:
                 "result": None,
                 "error": None,
                 "created_at": now(),
+                "authorization": self.registry.authorization_snapshot(tool, validated),
             }
             self._save(task)
-            requires_approval = tool in SENSITIVE or (
-                self.settings.mode == "manual" and tool not in READ_ONLY
+            requires_approval = (
+                require_approval
+                or tool in SENSITIVE
+                or self.registry.requires_approval(tool, validated)
+                or (self.settings.mode == "manual" and tool not in READ_ONLY)
             )
             if requires_approval:
                 task["state"] = "awaiting_approval"
@@ -73,18 +79,42 @@ class TaskEngine:
             task.update(state="cancelled", error="Emergency stop active")
             self._save(task)
             return task
+        started = time.monotonic()
         try:
+            if task.get("authorization") != self.registry.authorization_snapshot(
+                task["tool"], task["arguments"]
+            ):
+                raise PermissionError(
+                    "Application target changed after authorization; resubmit the action"
+                )
             task["state"] = "running"
             self._save(task)
             result = self.registry.execute(task["tool"], task["arguments"])
+            task["result"] = result
             task["state"] = "verifying"
             self._save(task)
             if not result.get("verified"):
-                raise RuntimeError("Tool did not verify its result")
-            task.update(state="completed", result=result)
+                raise RuntimeError(
+                    "Tool could not verify its result. " + str(result.get("detail", ""))[:500]
+                )
+            task.update(state="completed", result=result, outcome="success")
         except Exception as exc:
             # These are locally generated validation/OS exceptions, never provider response bodies.
-            task.update(state="failed", error=f"{type(exc).__name__}: {exc}")
+            from .applications import ApplicationNotFound
+
+            outcome = (
+                "permission_denied"
+                if isinstance(exc, PermissionError)
+                else "application_not_found"
+                if isinstance(exc, ApplicationNotFound)
+                else "timeout"
+                if isinstance(exc, TimeoutError)
+                else "unable_to_verify"
+                if "verify" in str(exc).lower()
+                else "execution_failed"
+            )
+            task.update(state="failed", error=f"{type(exc).__name__}: {exc}", outcome=outcome)
+        task["duration_seconds"] = round(time.monotonic() - started, 3)
         self._save(task)
         return task
 

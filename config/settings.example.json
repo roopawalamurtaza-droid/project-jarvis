@@ -27,5 +27,12 @@
   "reduce_motion": false,
   "compact_always_on_top": false,
   "desktop_context_enabled": false,
-  "speaking_style": "concise"
+  "speaking_style": "concise",
+  "desktop_actions_enabled": true,
+  "browser_enabled": true,
+  "default_browser": "default",
+  "default_search_engine": "google",
+  "browser_new_window": false,
+  "preferred_websites": {},
+  "model_action_planning": false
 }
