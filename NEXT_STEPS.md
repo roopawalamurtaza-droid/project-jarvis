@@ -4,8 +4,8 @@
 
 Current branch: **codex/phase3-ultron**. Read PHASE3_RELEASE.md. Baseline 295
 passed; integrated **444 passed in 90.79s**. Real native rendering at 100/150/200% Qt
-scaling, local AI and two-step approved filesystem workflow passed. Final frozen
-identity and launch/push record will be appended after packaging verification.
+scaling, local AI and two-step approved filesystem workflow passed. The final
+frozen identity and transfer evidence are recorded below.
 The broader protocol remains incomplete as explicitly documented.
 
 Compact input controls were found to overlap at the smallest window size;
@@ -18,6 +18,59 @@ or active voice-resource benchmark.
 Next: packaged live-microphone acceptance, compact/background/reduced-motion
 review, long-idle measurements and fresh-Windows distribution. Preserve local
 data, keys, model isolation, mic consent and bounded execution.
+
+### Final packaged identity and transfer
+
+- Runtime **0.3.0**, clean build commit
+  `985471500901249bde51d1e3621df3510b431765`, on `codex/phase3-ultron`.
+- Embedded build date `2026-10-13T20:56:31+00:00` (14 October in India).
+  Executable `C:\Jarvis\dist\JARVIS\JARVIS.exe`, 14,638,289 bytes,
+  file timestamp `2026-10-13T20:57:56+00:00`.
+- Executable SHA256
+  `2d575e177eea096c720a9e6fcd223da3e9fd711203a83a9ba7a93aab995fdb1a`.
+  All **25** packaged source hashes match current runtime files. Later
+  documentation/screenshot commits do not alter this runtime.
+- Final frozen GUI smoke and isolated Phase 3 verification both exit **0**.
+  Offline STT/VAD/audio packages, speech model, Windows speech and selected local
+  Ollama model are ready. Phase 3 verification uses generated isolated data:
+  real approved create/list filesystem routine, memory restart, sample-ledger
+  privacy, microphone-off truthfulness, reduced motion and actual resource samples.
+  Its model response is deliberately fake; the separate live local AI check is
+  documented in TESTING.md. No microphone is opened by these two checks.
+- Final frozen generated-speech voice regression and application shutdown exit
+  **0**. Actual Qt, WebRTC VAD, offline base.en, local qwen3:8b and Windows
+  playback passed unrelated-speech recovery, wake/time, same-session AI follow-up,
+  standalone wake acknowledgment, compound sleep and mute/capture closure.
+  A separate generated-speech actions run completed verified Chrome and VS Code
+  launch tasks. Reports record process evidence, not observed app contents.
+  The actions run measured wake endpoint 1.000s + STT 0.359s, playback-engine
+  start 1.531s after speech end; provider follow-up response 3.703s, playback
+  start 5.156s after speech end. No microphone was opened by these diagnostics.
+  The 0.844s maximum GUI timer gap includes synthetic fixture generation and
+  is not a steady-state latency or human acoustic benchmark.
+- Normal visible application **was launched and verified** on this Windows PC:
+  PID 60132, title `JARVIS · Command Center`, nonzero window handle, responsive,
+  actual process path `C:\Jarvis\dist\JARVIS\JARVIS.exe`, data `.local`.
+  The standalone process view was checked with normal Windows permissions;
+  the agent sandbox cannot enumerate this external desktop process.
+  Human 0.3.0 microphone acceptance is requested and remains pending until the
+  user reports a result. Earlier 0.2.x acceptance does not establish it.
+- The retained last error is `ProviderError` at `2026-10-13T20:32:43+00:00`
+  from the first live Phase 3 check while Ollama was stopped. Starting the
+  installed loopback service resolved it; subsequent live AI, frozen startup
+  and normal launch passed. It is a dated record, not a new startup failure.
+- Runtime source was successfully pushed to the private repository and remote
+  identifier verified. The final handoff documentation commit is Git HEAD and
+  the source archive MANIFEST; compare `git ls-remote` rather than guessing.
+- Full Windows artifact `transfer/JARVIS-Windows-0.3.0.zip`: **154,502,253 bytes**,
+  **1,112 files** individually hash-verified, plus INSTALL.txt and BUILD_MANIFEST.
+  SHA256 `4707868150d99b39f42b738ad956e0f5f4c9e17b623baad798b3ab424d1dd473`.
+  The unsigned binary archive is local, not published as a GitHub release.
+- The previous complete 0.2.1 folder is retained at `transfer/phase2-build-0.2.1`.
+  `Start JARVIS.cmd` targets the new executable and existing `C:\Jarvis\.local`.
+  No matching desktop or user Start Menu shortcut was found during this check.
+  Saved settings and memory counts matched the pre-update snapshot; microphone
+  and speech opt-ins are retained. No secrets file was present or replaced.
 
 ## Historical Phase2 repair/transfer record
 
