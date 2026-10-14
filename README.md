@@ -11,6 +11,11 @@ Read [Phase 4.5 delivery and limits](PHASE45_RELEASE.md) and
 [NEXT_STEPS.md](NEXT_STEPS.md) for actual executable identity and verification.
 Diagnostics identifies the executable you are running; source edits require a rebuild.
 
+On **15 October 2026**, the user confirmed the rebuilt **0.4.5** hands-free
+wake/Notepad, Chrome/Python tutorial search, VS Code follow-up and sleep sequence,
+including spoken replies and the shared Mini. The final automated suite passed
+**949 tests**. Broader acoustic and fresh-Windows checks remain open.
+
 The historical 0.4.0 suite passed **823 tests**. On 14 October 2026, the user confirmed the
 live hands-free Notepad, Chrome/Python tutorial search, VS Code follow-up and
 sleep sequence, including visible search results and spoken replies.

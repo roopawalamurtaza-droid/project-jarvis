@@ -128,8 +128,12 @@ repaired natural compact→restore→close; no forced-quit workaround was added.
 The final normal window was launched from `C:\Jarvis\dist\JARVIS\JARVIS.exe`
 through `Start JARVIS.cmd`; settings, memory count and credential-file hashes
 were preserved. Actual identity, successful pushes and verified transfer archives
-are in NEXT_STEPS.md. The current 0.4.5 human microphone/mini check is requested
-and pending; historical acceptance and synthetic speech are separate evidence.
+are in NEXT_STEPS.md. **Human 0.4.5 acceptance passed on 15 October 2026:** the
+user confirmed wake/Notepad → combined Chrome/Python tutorial search → VS Code
+follow-up → sleep and the shared Mini worked. The replies were spoken, apps and
+search results appeared, follow-up needed no second wake phrase and sleep
+returned to wake listening, without holding a microphone button. This direct
+user report is separate from historical acceptance and synthetic speech.
 
 ## Reproduce installation, launch and checks
 
@@ -199,10 +203,11 @@ files. A clicked link is validated and dispatched through the same HTTPS tool an
 approvals as other commands. Approval cards do not bypass exact-target grants,
 one-use authorization, cancellation or emergency stop.
 
-Remaining verification includes the human hands-free wake/app/search/follow-up/
-sleep sequence, natural spoken punctuation, tray/mini acoustic behavior, diverse
-physical 125%/150% display scaling and
-longer idle/voice resource checks. These must be reported as actual checks when
-completed, with wider acoustic, fresh-PC, screen-reader and signed-distribution
-acceptance kept separate. Preserve settings, memory and protected credentials
-when replacing the build; never include local data or API keys in the public repo.
+Remaining verification includes broader room/noise/accent/far-field coverage,
+voice-specific punctuation quality, tray/background acoustic behavior, diverse
+physical 125%/150% display scaling and longer idle/voice resource checks. These
+must be reported as actual checks when completed, with fresh-PC, screen-reader
+and signed-distribution acceptance kept separate. The confirmed basic sequence
+and Mini do not establish these broader results or a 95% visual-similarity score.
+Preserve settings, memory and protected credentials when replacing the build;
+never include local data or API keys in the public repo.

@@ -8,6 +8,8 @@ Actual Windows renders were compared and refined across multiple iterations.
 Real local streaming, own-process speech metering and disk/network measurements
 are additive; permissions and the existing voice/action engine remain intact.
 Read PHASE45_RELEASE.md and NEXT_STEPS.md for final verification and build identity.
+On 15 October 2026, the user confirmed the rebuilt 0.4.5 hands-free wake/app/search/
+follow-up/sleep sequence and shared Mini worked, including spoken replies.
 The 95% target is not a measured score. Diverse physical-display, long-soak and
 fresh-machine checks remain distinct from the recorded local tests.
 

@@ -28,7 +28,13 @@ synthetic voice run's maximum gap was 0.922s, so these short samples are not a
 universal latency guarantee. A native compact→restore→close regression exited
 naturally in 0.469s after the repaired parentless helper-label issue.
 The normal executable was launched and user data preservation verified.
-The new 0.4.5 human microphone/mini check is requested separately and pending.
+**Human 0.4.5 acceptance passed on 15 October 2026:** the user confirmed the
+live wake/Notepad → combined Chrome/Python tutorial search → VS Code follow-up
+→ sleep sequence and shared Mini. Spoken replies, visible app/search results,
+follow-up without another wake phrase and return to wake listening worked without
+holding a button. This is direct user observation of the rebuilt application;
+it does not establish browser-adapter page inspection, quantified acoustic
+accuracy, latency, visual similarity or fresh-machine acceptance.
 
 ## Historical Phase 4 verification — 2026-10-14
 
@@ -221,12 +227,15 @@ receipt; they check engine state and filesystem results.
 .\.venv\Scripts\python.exe scripts\verify_voice.py --data-dir 'C:\Jarvis\.local' --wav 'C:\Jarvis\.local\voice-test.wav' --microphone --speak
 ```
 
-## Human and fresh-machine checks still required
+## Additional human and fresh-machine checks still required
+
+The basic current 0.4.5 hands-free sequence and shared Mini passed as recorded
+above. The following broader checks remain separate.
 
 1. Launch Start JARVIS.cmd and confirm native display scaling, tray minimize/restore
    and compact view behave correctly on your screen.
-2. Choose the HyperX microphone, hold to speak a phrase, release, review the actual
-   recognized words, send them, and judge the spoken answer's audibility.
+2. Exercise the separate hold-to-talk path and additional microphone/speaker
+   devices: release, review the recognized words, send and judge audibility.
 3. Open Notepad, Calculator and VS Code, and review their actual receipts in
    Mission Control. Phase 4 distinguishes matching visible windows, foreground
    focus and accepted launch evidence. Verify focus refusal is reported honestly.

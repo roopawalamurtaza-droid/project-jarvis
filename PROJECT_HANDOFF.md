@@ -10,7 +10,13 @@ NEXT_STEPS.md records final test, packaging, live executable and transfer eviden
 The final full suite passed **949 tests**, and the clean runtime build
 **af909466f48c** passed frozen UI, action, memory/workflow and generated-voice
 checks. It was launched normally with preserved settings/memory/credentials.
-The current 0.4.5 human microphone/mini check is requested separately and pending.
+On **15 October 2026**, the user confirmed the current **0.4.5** live wake/Notepad
+→ combined Chrome/Python tutorial search → VS Code follow-up → sleep sequence
+and shared Mini worked. Spoken replies, app/search results, follow-up without a
+second wake phrase and return to wake listening worked without holding a button.
+This is direct human acceptance of the final rebuilt executable, separate from
+generated-speech diagnostics. Broader acoustic/fresh-machine checks and a
+quantified visual-similarity score remain unmeasured.
 
 The shared service, database, Windows actions, permission controls and microphone
 engine remain. New modules provide original Qt graphics, navigation, message

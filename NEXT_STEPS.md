@@ -57,9 +57,13 @@ branch and build are preserved. Read PHASE45_RELEASE.md and the visual spec.
   and adjacent SHA256 identify the final delivery documentation commit. Restore
   its all-ref bundle with `codex/phase4-5-reference-ui`. No user data/keys/models
   are included. Do not zip the entire transfer folder, which contains local backups.
-- Human **0.4.5** wake/Notepad → combined Chrome/search → VS Code follow-up → sleep
-  and shared Mini check are requested and pending. Keep this distinct from the
-  prior user-confirmed 0.4.0 sequence and generated PCM diagnostics.
+- **Human 0.4.5 acceptance passed on 15 October 2026:** the user confirmed
+  “Hey Jarvis, open Notepad” → “Now open Chrome and search for Python tutorials”
+  → “Open VS Code too” → “Thanks Jarvis, go to sleep”, plus the shared Mini.
+  Spoken replies, app/search results, follow-up without another wake phrase and
+  return to wake listening worked without holding a button. This is the user's
+  observation of the final rebuilt executable, separate from generated PCM and
+  prior 0.4.0 acceptance. Broader acoustic and fresh-machine checks remain open.
 
 ## Historical Phase 4 delivery
 
