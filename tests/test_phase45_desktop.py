@@ -46,6 +46,13 @@ def test_compact_and_restore_have_no_colliding_dashboard(app, window):
     assert window.dashboard.isVisible() == (window.width() >= 1260)
     assert window.core.maximumHeight() > 350
     assert window.composer.height() == 46
+    assert window.assistant_heading.window() is window
+    assert window.presence_caption.window() is window
+    assert window.provider_ribbon.window() is window
+    assert not any(
+        widget.isVisible() and widget is not window and widget is not window.ambient_overlay
+        for widget in app.topLevelWidgets()
+    )
 
 
 def test_cards_use_real_permissions_and_do_not_discard_drafts(app, window):

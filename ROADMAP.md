@@ -69,6 +69,6 @@ distinct from the user's Phase 2 voice work.
 Full phase acceptance is recorded in TESTING.md rather than inferred from source
 code or interface mockups. The first version used explicit tools. Phase 4 adds
 optional reviewed structured model proposals, not unattended action planning.
-Cloud credentials, monetary budgets, streaming and broader runtime autonomy
+Cloud credential verification, monetary budgets, cloud response streaming and broader runtime autonomy
 require separate implementation and verification before enabling them.
 

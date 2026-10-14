@@ -3,8 +3,10 @@
 Launch `C:\Jarvis\Start JARVIS.cmd`; it uses `dist\JARVIS\JARVIS.exe` and `.local`.
 Source edits require rebuilding the executable with `scripts\package.ps1`.
 
-1. On the Assistant screen, check **Speak replies** beside **Hold to talk**.
-   This checkbox is not inside the Settings form.
+1. In 0.4.5, right-click the Assistant input microphone and choose **Show voice
+   controls**. Check **Speak replies** beside **Hold to talk**, or enable the same
+   speech preference in Settings. The trimmed input microphone mutes/resumes
+   hands-free voice; **Hold to talk** remains the separate push-to-talk control.
 2. In Settings, inspect version, Git commit, build time and executable path.
    Run startup health check. Ollama and the selected model should be ready.
 3. Refresh audio devices; choose microphone, voice and speaker.
@@ -18,6 +20,13 @@ Source edits require rebuilding the executable with `scripts\package.ps1`.
 The indicator distinguishes active input, gated input with a stream still open,
 off, and errors. Pause closes the microphone; Resume reopens it. Mute cancels
 requests, stops speech and closes input. Push-to-talk remains available after pause.
+
+**Mini** at the bottom of the sidebar pins the movable floating assistant. It
+shares the existing microphone/backend and voice state, with no capture session
+of its own. Its microphone control mutes/unmutes the shared controller. Optional
+always-on-top uses the compact preference in Settings. Closing the mini hides
+that view. Its waveform uses measured microphone RMS or optional exact-own-process
+Windows playback peaks; an unavailable level is shown without simulated activity.
 
 Normal playback discards microphone input and waits 350 ms after speech to avoid
 self activation. Interrupt stops playback. Optional voice stop recognition is

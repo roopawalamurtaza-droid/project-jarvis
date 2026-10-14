@@ -53,8 +53,8 @@ Ollama must be running. In Settings, select your model, permitted folders,
 microphone and Windows voice. Hold **Hold to talk**, release to transcribe, review
 the text, and press **Send**. Turn on **Speak replies** to hear answers.
 
-For hands-free use, check **Speak replies** on the **Assistant** screen beside
-**Hold to talk**. Open **Settings**, refresh audio devices, choose a microphone
+For hands-free use, enable **Speak replies** in **Settings**, or reveal the
+Assistant voice controls by right-clicking its microphone. Refresh audio devices, choose a microphone
 and speaker, check **Allow hands-free microphone listening on this PC**, then
 save. Say **Hey Jarvis**, wait for the acknowledgment,
 and speak. Follow-ups work for 20 seconds by default. Pause and Mute close capture.

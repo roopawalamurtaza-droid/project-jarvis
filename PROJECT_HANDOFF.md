@@ -28,10 +28,10 @@ Notepad → combined Chrome/Python tutorial search → VS Code follow-up → sle
 sequence, including visible search results and hands-free spoken operation.
 The broader autonomy protocol remains incomplete.
 
-## Current Phase 4 checkpoint — 14 October 2026
+## Historical Phase 4 checkpoint — 14 October 2026
 
-Continue **codex/phase4-actions**, source version **0.4.0**, in the same private
-repository. PHASE4_RELEASE.md is the current action-engine feature, architecture,
+That release used **codex/phase4-actions**, source version **0.4.0**, while the
+repository was private. PHASE4_RELEASE.md preserves the action-engine feature, architecture,
 permission and limits contract. NEXT_STEPS.md records final source/runtime
 identities, suite results, actual Windows/human acceptance, successful pushes and
 transfer status. Do not infer package success from source changes or an earlier
@@ -85,12 +85,12 @@ RECOGNITION_REPAIR.md. Use the latest record in NEXT_STEPS.md, not the earlier
 A Windows desktop companion with local-first conversation, explicit memory,
 opt-in hands-free voice, and narrow permission-controlled actions. Calm concise
 wording, honest execution evidence and user control take precedence over fictional
-capability claims. The current milestone is the Phase 4 local action engine,
-application library, explicit multi-command dispatch and evidence-based Windows
-feedback, extending the Phase 3 command center and repaired voice system. The
-user confirmed both the historical 0.3.0 sequence and the current 0.4.0 live
+capability claims. The current milestone is the Phase 4.5 reference interface,
+extending the existing application library, multi-command dispatch and measured
+Windows feedback with a live dashboard, shared mini and native voice graphics.
+The user confirmed both the historical 0.3.0 sequence and the 0.4.0 live
 Notepad, Chrome/search, VS Code follow-up and sleep sequence on this PC. The
-current-build evidence is recorded separately in NEXT_STEPS.md and TESTING.md.
+new 0.4.5 build evidence is recorded separately in NEXT_STEPS.md and TESTING.md.
 Broader acoustic accuracy and fresh-machine distribution acceptance remain open.
 
 ## Repository and actual state
@@ -333,7 +333,7 @@ for local Ollama/voice. Do not put variable values, tokens or keys in this docum
 PowerShell, in the checkout (examples assume C:\Jarvis):
 
 ```powershell
-git clone -b codex/phase4-actions https://github.com/roopawalamurtaza-droid/project-jarvis.git C:\Jarvis
+git clone -b codex/phase4-5-reference-ui https://github.com/roopawalamurtaza-droid/project-jarvis.git C:\Jarvis
 cd C:\Jarvis
 .\scripts\setup.ps1
 .\.venv\Scripts\python.exe -m jarvis --data-dir .local --doctor
@@ -402,7 +402,7 @@ uncommitted/untracked nonignored changes. Restore with:
 
 ```powershell
 Expand-Archive -LiteralPath .\PROJECT_JARVIS_HANDOFF.zip -DestinationPath .\handoff
-git clone -b codex/phase4-actions .\handoff\project-jarvis.bundle .\Jarvis
+git clone -b codex/phase4-5-reference-ui .\handoff\project-jarvis.bundle .\Jarvis
 cd .\Jarvis
 git status --short
 .\scripts\setup.ps1

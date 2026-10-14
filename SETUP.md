@@ -46,11 +46,19 @@ CTranslate2/CUDA/cuDNN libraries; CPU is the tested fallback. Changing the speec
 model requires explicitly installing that model too.
 
 In Settings click **Refresh audio devices**, select a microphone and an installed
-Windows voice, then **Save settings**. Speech uses the Windows default output;
-the **Windows sound settings** button lets you configure headphones/speakers.
-Enable **Speak replies**. Hold the microphone button for up to 30 seconds, release,
+Windows voice and, if wanted, a speaker output, then **Save settings**. Speech uses
+the chosen supported Qt output device or the Windows default when none is selected;
+the **Windows sound settings** button opens Windows device controls. On the 0.4.5
+Assistant screen, right-click the input microphone and choose **Show voice controls**
+to reveal **Hold to talk** and **Speak replies**. The same speech preference is in
+Settings. Enable **Speak replies**. Hold **Hold to talk** for up to 30 seconds, release,
 review the transcription and send it. **Interrupt** stops playback/capture or
 cancels a pending AI response. Captured samples are never saved automatically.
+
+Hands-free capture separately requires **Allow hands-free microphone listening on
+this PC** in Settings. Save, then say **Hey Jarvis** and wait for acknowledgment.
+The input microphone mutes/resumes the shared controller; **Mini** at the sidebar
+bottom shows its movable miniature view without a second capture session.
 
 ## Cloud providers and keys
 
@@ -72,8 +80,14 @@ chat, stored memory or local tool output.
 Allowed roots begin with the data directory's `workspace` folder. Create it yourself
 or configure an existing folder explicitly in Settings. One absolute folder per
 line grants that subtree; remove a root to revoke future access. Grant narrow
-project folders. App actions are limited to Notepad, Calculator and standard
-VS Code installation paths. VS Code project-opening arguments are a future feature.
+project folders. Supported app actions use exact local discovery and reviewed
+targets through Application Library: known installations, fixed supported Store
+identities and reviewed portable executables. Arbitrary discovered/custom targets
+start disabled; inspect the exact target before **Review & enable**. Aliases and
+favorites remain local. No arbitrary arguments, shell/script interpreter or
+privileged installer execution is accepted. VS Code project-opening arguments
+remain a future feature. Website/search requests use the configured browser and
+existing HTTPS/approval checks; the application does not read the resulting pages.
 
 The Activity form shows exact tool/path before submission. Read and list actions
 stay local. Directory creation produces a pending task; select it, review its
@@ -110,7 +124,9 @@ cloud provider, plus Windows voices and microphone permission.
 
 To uninstall, quit JARVIS and remove its application folder. To delete its user
 data, remove the exact data directory you selected after backing up wanted memories.
-No registry/startup entry or privileged service needs removing. Ollama and shared
+No privileged service is installed. If **Start with Windows** was explicitly
+enabled, turn it off in Settings before uninstalling to remove the current-user
+startup entry. Ollama and shared
 Python/uv installations belong to the user and are not uninstalled with JARVIS.
 
 ## Troubleshooting
