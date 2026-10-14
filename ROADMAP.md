@@ -1,6 +1,17 @@
 # Roadmap and acceptance gates
 
-## Current Phase 4 source release: 0.4.0
+## Current Phase 4.5 UI release: 0.4.5
+
+Continue `codex/phase4-5-reference-ui`. The supplied image now drives the native
+layout, dimensional core, live dashboard, message cards and shared mini assistant.
+Actual Windows renders were compared and refined across multiple iterations.
+Real local streaming, own-process speech metering and disk/network measurements
+are additive; permissions and the existing voice/action engine remain intact.
+Read PHASE45_RELEASE.md and NEXT_STEPS.md for final verification and build identity.
+The 95% target is not a measured score. Diverse physical-display, long-soak and
+fresh-machine checks remain distinct from the recorded local tests.
+
+## Historical Phase 4 source release: 0.4.0
 
 The user's Windows action directive continues the existing application on
 `codex/phase4-actions`. Implemented source adds bounded local discovery and

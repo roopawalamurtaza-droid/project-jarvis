@@ -31,7 +31,9 @@ Preserve C:\\Jarvis\\.local (settings/memory/keys/models). Never overwrite it wi
 Launch: .\\JARVIS\\JARVIS.exe --data-dir C:\\Jarvis\\.local
 Check Diagnostics: version, Git commit, UTC build date and actual executable path
 against BUILD_MANIFEST.json. Start Ollama and select an installed model.
-Speak replies is on Assistant; hands-free permission and devices are in Settings.
+Speak replies, hands-free permission and devices are in Settings. Right-click
+the Assistant microphone icon for optional voice controls and Hold to talk.
+Use Mini in the sidebar for the movable assistant; it shares the same engine.
 Existing opt-ins are preserved. New computers require explicit microphone consent,
 offline Whisper model setup and fresh API keys. See PROJECT_HANDOFF.md.
 No user data, keys or models are included. Unsigned build; fresh-PC testing pending.

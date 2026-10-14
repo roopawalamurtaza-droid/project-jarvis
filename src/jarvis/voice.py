@@ -10,6 +10,7 @@ import importlib
 import math
 import sys
 import threading
+import time
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -379,6 +380,8 @@ class SpeechOutput:
         self._error: str | None = None
         self._active = False
         self._state_started = False
+        self._playback_meter: Any = None
+        self._meter_retry_at = 0.0
         self._finished_callbacks: list[Callable[[], None]] = []
         self.engine = ""
         try:
@@ -462,6 +465,7 @@ class SpeechOutput:
     def _finish(self) -> None:
         if not self._active:
             return
+        self._close_playback_meter()
         self._active = False
         self._state_started = False
         for callback in tuple(self._finished_callbacks):
@@ -471,6 +475,38 @@ class SpeechOutput:
     def speaking(self) -> bool:
         """Whether one accepted utterance is still active, including engine startup."""
         return self._active
+
+    @property
+    def level(self) -> float | None:
+        """Measured own-process Windows playback peak, or None when unavailable.
+
+        No microphone/loopback stream is opened. This optional visual measurement
+        never changes speech playback, completion or error handling.
+        """
+        if not self._active or self._tts is None:
+            return None
+        if self._core.QThread.currentThread() != self._tts.thread():
+            return None
+        try:
+            if getattr(self, "_playback_meter", None) is None:
+                if time.monotonic() < getattr(self, "_meter_retry_at", 0.0):
+                    return None
+                self._meter_retry_at = time.monotonic() + 1.0
+                from .audio_meter import ProcessAudioMeter
+
+                self._playback_meter = ProcessAudioMeter()
+            return self._playback_meter.read()
+        except Exception:
+            return None
+
+    def _close_playback_meter(self) -> None:
+        meter, self._playback_meter = getattr(self, "_playback_meter", None), None
+        self._meter_retry_at = 0.0
+        if meter is not None:
+            try:
+                meter.close()
+            except Exception:
+                pass  # Optional visualization cannot alter the speech lifecycle.
 
     def on_finished(self, callback: Callable[[], None]) -> Callable[[], None]:
         """Subscribe to completion/stop/error exactly once per accepted utterance.

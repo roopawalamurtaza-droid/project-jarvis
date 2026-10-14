@@ -14,7 +14,7 @@ import math
 import re
 from contextlib import suppress
 from dataclasses import dataclass
-from typing import Any, Protocol
+from typing import Any, Callable, Protocol
 from urllib.parse import quote, urlsplit
 
 import httpx
@@ -24,6 +24,7 @@ MAX_TOOL_CALLS = 6
 MAX_TOOL_SCHEMAS = 64
 MAX_TOOL_SCHEMA_BYTES = 256 * 1024
 MAX_TOOL_ARGUMENT_BYTES = 64 * 1024
+MAX_STREAM_TEXT_CHARS = 100000
 _TOOL_NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_]{0,63}\Z")
 
 
@@ -250,14 +251,20 @@ class HTTPProvider:
                 "The provider returned an unexpected response.", "invalid_response"
             ) from None
 
-    async def _run(self, url, payload, headers, timeout, cancel, allowed_tools) -> ProviderReply:
+    async def _run(
+        self, url, payload, headers, timeout, cancel, allowed_tools, on_delta=None
+    ) -> ProviderReply:
         async with httpx.AsyncClient(
             transport=self._transport,
             timeout=timeout,
             trust_env=False,
             follow_redirects=False,
         ) as client:
-            request = asyncio.create_task(self._post(client, url, payload, headers))
+            request = asyncio.create_task(
+                self._post(client, url, payload, headers)
+                if on_delta is None
+                else self._post_stream(client, url, payload, headers, on_delta, cancel)
+            )
             deadline = asyncio.get_running_loop().time() + timeout
             try:
                 while not request.done():
@@ -270,7 +277,10 @@ class HTTPProvider:
                     await asyncio.wait({request}, timeout=0.05)
                 if cancel is not None and cancel.is_set():
                     raise ProviderCancelled()
-                return self._parse(request.result(), allowed_tools=allowed_tools)
+                result = request.result()
+                return (
+                    self._parse(result, allowed_tools=allowed_tools) if on_delta is None else result
+                )
             finally:
                 if not request.done():
                     request.cancel()
@@ -333,6 +343,67 @@ class HTTPProvider:
         return cls._text(text)
 
 
+class _AnswerDeltas:
+    """Hide legacy inline thinking tags even when split between network chunks.
+
+    Modern Ollama sends reasoning in message.thinking. A few older models embed
+    a leading <think> block in content; retain only a possible boundary prefix
+    and never publish that block. Once the answer starts, literal tags in prose
+    or code are preserved rather than mistaken for hidden model reasoning.
+    """
+
+    def __init__(self):
+        self.pending = ""
+        self.hidden = False
+        self.answer_started = False
+
+    def feed(self, content: str) -> str:
+        if self.answer_started:
+            remaining, self.pending = self.pending + content, ""
+            return remaining
+        self.pending += content
+        output = []
+        while self.pending:
+            marker = "</think>" if self.hidden else "<think>"
+            position = self.pending.lower().find(marker)
+            if position >= 0:
+                if not self.hidden:
+                    if self.pending[:position].strip():
+                        self.answer_started = True
+                        output.append(self.pending)
+                        self.pending = ""
+                        break
+                    output.append(self.pending[:position])
+                self.pending = self.pending[position + len(marker) :]
+                self.hidden = not self.hidden
+                continue
+            keep = 0
+            lowered = self.pending.lower()
+            for length in range(1, min(len(marker), len(lowered) + 1)):
+                if lowered.endswith(marker[:length]):
+                    keep = length
+            ready = self.pending[:-keep] if keep else self.pending
+            if not self.hidden:
+                output.append(ready)
+                if ready.strip():
+                    self.answer_started = True
+                    if keep:
+                        output.append(self.pending[-keep:])
+                    self.pending = ""
+                    break
+            self.pending = self.pending[-keep:] if keep else ""
+            break
+        return "".join(output)
+
+    def finish(self) -> str:
+        if self.hidden:
+            raise ProviderError(
+                "Ollama's response ended inside an incomplete thinking block.", "invalid_response"
+            )
+        remaining, self.pending = self.pending, ""
+        return remaining
+
+
 class OllamaProvider(HTTPProvider):
     name = "ollama"
 
@@ -358,6 +429,165 @@ class OllamaProvider(HTTPProvider):
                 "The Ollama endpoint port is invalid.", "invalid_endpoint"
             ) from None
         self._url = url.rstrip("/")
+
+    def generate_stream(
+        self,
+        messages: list[dict[str, str]],
+        *,
+        model: str,
+        timeout: float,
+        max_output_tokens: int,
+        on_delta: Callable[[str], None],
+        cancel: CancelSignal | None = None,
+    ) -> ProviderReply:
+        """Stream validated ordinary text on the calling worker, then return its receipt.
+
+        Ollama's NDJSON content is streamed as received, never a simulated typing
+        effect. Separate thinking fields are ignored. No function schemas are sent
+        and unsolicited tool proposals are rejected. Consumers must discard their
+        draft on failure; partial content never becomes a saved completed answer.
+        """
+        if cancel is not None and cancel.is_set():
+            raise ProviderCancelled()
+        if not callable(on_delta):
+            raise ProviderError("A valid streaming receiver is required.", "invalid_callback")
+        if not model or len(model) > 256 or any(ord(char) < 32 for char in model):
+            raise ProviderError("Choose a valid model name in Settings.", "invalid_model")
+        if not 0 < timeout <= 300 or not 16 <= max_output_tokens <= 32768:
+            raise ProviderError("The request limits are invalid.", "invalid_limits")
+        url, payload, headers = self._build(messages, model, max_output_tokens, [])
+        payload["stream"] = True
+        try:
+            return asyncio.run(
+                self._run(url, payload, headers, timeout, cancel, frozenset(), on_delta)
+            )
+        except ProviderError:
+            raise
+        except (httpx.TimeoutException, TimeoutError):
+            raise ProviderError(
+                "The provider timed out. Try again when it is available.", "timeout"
+            ) from None
+        except httpx.HTTPError:
+            raise ProviderError(
+                "Could not reach the selected provider.", "connection_error"
+            ) from None
+        except (ValueError, TypeError, KeyError, AttributeError, RecursionError):
+            raise ProviderError(
+                "The provider returned an unexpected response.", "invalid_response"
+            ) from None
+
+    async def _post_stream(self, client, url, payload, headers, on_delta, cancel) -> ProviderReply:
+        async with client.stream("POST", url, json=payload, headers=headers) as response:
+            if response.status_code >= 300:
+                status = response.status_code
+                if status in (401, 403):
+                    message, code = "The provider rejected the API key or access.", "authentication"
+                elif status == 429:
+                    message, code = "The provider request limit was reached.", "rate_limit"
+                elif status == 404:
+                    message, code = (
+                        "The provider or model was not found. Check Settings.",
+                        "not_found",
+                    )
+                else:
+                    message, code = (
+                        f"The provider could not complete the request (HTTP {status}).",
+                        "http_error",
+                    )
+                raise ProviderError(message, code)
+            pending = bytearray()
+            size = 0
+            text_size = 0
+            pieces = []
+            terminal = None
+            answer = _AnswerDeltas()
+
+            def publish(delta):
+                nonlocal text_size
+                if not delta:
+                    return
+                if cancel is not None and cancel.is_set():
+                    raise ProviderCancelled()
+                text_size += len(delta)
+                if text_size > MAX_STREAM_TEXT_CHARS:
+                    raise ProviderError(
+                        "The provider text exceeded the application size limit.",
+                        "response_too_large",
+                    )
+                pieces.append(delta)
+                try:
+                    on_delta(delta)
+                except ProviderError:
+                    raise
+                except Exception:
+                    raise ProviderError(
+                        "The response display could not receive streamed text.",
+                        "stream_receiver_error",
+                    ) from None
+                if cancel is not None and cancel.is_set():
+                    raise ProviderCancelled()
+
+            def consume(line):
+                nonlocal terminal
+                if not line.strip():
+                    return
+                if terminal is not None:
+                    raise ProviderError(
+                        "Ollama returned data after completing its response.", "invalid_response"
+                    )
+                data = _load_json(line)
+                if not isinstance(data, dict):
+                    raise ProviderError("Ollama returned an invalid stream.", "invalid_response")
+                # Enforce the same JSON depth/type safety as structured tool data.
+                _bounded_json(data, MAX_RESPONSE_BYTES)
+                if data.get("error"):
+                    raise ProviderError(
+                        "Ollama could not generate a response. Check the installed model."
+                    )
+                done = data.get("done")
+                message = data.get("message")
+                if not isinstance(done, bool) or not isinstance(message, dict):
+                    raise ProviderError("Ollama returned an invalid stream.", "invalid_response")
+                if message.get("role") not in (None, "assistant"):
+                    raise ProviderError("Ollama returned an invalid stream.", "invalid_response")
+                calls = _call_list(message.get("tool_calls", []))
+                if calls:
+                    raise ProviderError(
+                        "Ollama returned an unsolicited tool request.", "invalid_tool_call"
+                    )
+                content = message.get("content", "")
+                if not isinstance(content, str):
+                    raise ProviderError("Ollama returned an invalid stream.", "invalid_response")
+                # Only content enters the answer; message.thinking is never emitted.
+                publish(answer.feed(content))
+                if done:
+                    publish(answer.finish())
+                    terminal = data
+
+            async for chunk in response.aiter_bytes():
+                if cancel is not None and cancel.is_set():
+                    raise ProviderCancelled()
+                size += len(chunk)
+                if size > MAX_RESPONSE_BYTES:
+                    raise ProviderError(
+                        "The provider response exceeded the size limit.", "response_too_large"
+                    )
+                pending.extend(chunk)
+                while (end := pending.find(b"\n")) >= 0:
+                    line = bytes(pending[:end])
+                    del pending[: end + 1]
+                    consume(line)
+            if pending.strip():
+                consume(bytes(pending))
+            if terminal is None:
+                raise ProviderError(
+                    "Ollama's response ended before completion.", "incomplete_response"
+                )
+            return ProviderReply(
+                self._text("".join(pieces)),
+                _usage(terminal.get("prompt_eval_count"), terminal.get("eval_count")),
+                terminal.get("done_reason") == "length",
+            )
 
     def _build(self, messages, model, max_output_tokens, tools):
         payload = {

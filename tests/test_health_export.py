@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+from jarvis import __version__
 from jarvis.config import Settings
 from jarvis.conversation import route_voice_command
 from jarvis.health import build_identity, startup_health
@@ -13,7 +14,7 @@ from jarvis.health import build_identity, startup_health
 
 def test_health_identifies_source_without_recording(tmp_path):
     identity = build_identity()
-    assert identity["version"] == "0.4.0"
+    assert identity["version"] == __version__
     assert identity["git_commit"]
     assert identity["executable"]
     report = startup_health(Settings(data_dir=tmp_path))

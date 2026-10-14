@@ -1,4 +1,24 @@
-# Verification record — 2026-10-14
+# Verification record — 2026-10-15
+
+## Phase 4.5 reference UI — 0.4.5
+
+Baseline: **823 passed in 151.65s**. Final full source suite: **949 passed in
+114.92s**. Ruff and all **86** formatting checks passed. A later **12-test**
+UI/identity check passed after the final small motion/tray refinements; these
+overlap and are not added to the full count. The earlier full attempt had
+943 passes and one stale 0.4.0 version assertion, corrected to actual identity.
+
+Real native Windows UI captures were compared across multiple iterations;
+all 11 existing/new destinations selected correctly. Actual local qwen3:8b
+answer deltas and final Markdown were displayed. A final short native sample
+recorded a 0.062s maximum timer gap. Native Qt scaling-factor captures at 1.25
+and 1.5 passed, without changing Windows display settings. Scalar playback
+metering produced 172 exact-own-process samples, 143 positive, peak 0.53837,
+and unavailable after stop. Disk/network readings are native measured values;
+CPU temperature remains unavailable. See PHASE45_RELEASE.md and NEXT_STEPS.md
+for current packaging/deployment and separate human acceptance evidence.
+
+## Historical Phase 4 verification — 2026-10-14
 
 Final Phase 4 source suite: **823 passed in 137.20s**; Ruff and all 73 formatting
 checks passed. A reproducible Qt overlay/worker lifetime issue found during

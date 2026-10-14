@@ -1,5 +1,6 @@
 """Privacy gates, interval measurement, and bounded read-only device queries."""
 
+import ctypes
 import io
 import subprocess
 from pathlib import Path
@@ -16,6 +17,8 @@ def measured_windows(monkeypatch):
     clock = [10.0]
     monkeypatch.setattr(awareness.time, "monotonic", lambda: clock[0])
     monkeypatch.setattr(awareness, "_read_memory", lambda: (1000, 400))
+    monkeypatch.setattr(awareness, "_read_disk", lambda: (2000, 500))
+    monkeypatch.setattr(awareness, "_read_network_counters", lambda: {1: (100, 200)})
     monkeypatch.setattr(awareness, "_nvidia_executable", lambda: None)
     monkeypatch.setattr(awareness, "_read_cpu_times", lambda: (200, 400, 100))
     return clock
@@ -243,3 +246,111 @@ def test_collection_contract_keeps_desktop_consent_off_by_default(measured_windo
     assert data["system"]["memory_percent"] == 60
     assert data["desktop"]["consent_granted"] is False
     assert data["desktop"]["window_title"] is None
+
+
+def test_disk_is_measured_and_temperature_is_explicitly_unavailable(measured_windows):
+    result = awareness.SystemMetricsProvider().sample()
+    assert result.disk_percent == 75
+    assert result.disk_total_bytes == 2000
+    assert result.disk_used_bytes == 1500
+    assert result.disk_unavailable_reason is None
+    assert result.cpu_temperature_celsius is None
+    assert "no supported" in result.temperature_unavailable_reason
+
+
+@pytest.mark.parametrize("measurement", [(0, 0), (100, 110), (100, -1)])
+def test_disk_invalid_measurements_remain_unavailable(measured_windows, monkeypatch, measurement):
+    monkeypatch.setattr(awareness, "_read_disk", lambda: measurement)
+    result = awareness.SystemMetricsProvider().sample()
+    assert result.disk_percent is None
+    assert result.disk_used_bytes is None
+    assert result.disk_total_bytes is None
+    assert "unavailable" in result.disk_unavailable_reason
+
+
+def test_network_is_a_real_two_sample_64bit_counter_interval(measured_windows, monkeypatch):
+    monkeypatch.setattr(awareness, "_read_network_counters", lambda: {1: (2**40, 2**41)})
+    provider = awareness.SystemMetricsProvider()
+    first = provider.sample()
+    assert first.network_bytes_per_second is None
+    assert "second sample" in first.network_unavailable_reason
+    measured_windows[0] += 5
+    monkeypatch.setattr(
+        awareness, "_read_network_counters", lambda: {1: (2**40 + 1000, 2**41 + 1500)}
+    )
+    second = provider.sample()
+    assert second.network_bytes_per_second == 500
+    assert second.network_unavailable_reason is None
+    assert "interface" not in second.as_dict()
+    assert "counters" not in second.as_dict()
+
+
+@pytest.mark.parametrize(
+    "counters,interval",
+    [({1: (99, 200)}, 5), ({2: (100, 200)}, 5), ({1: (100, 200)}, 0), ({1: (100, 200)}, 61)],
+)
+def test_network_counter_resets_adapter_changes_and_bad_intervals_are_gaps(
+    measured_windows, monkeypatch, counters, interval
+):
+    provider = awareness.SystemMetricsProvider()
+    provider.sample()
+    measured_windows[0] += interval
+    monkeypatch.setattr(awareness, "_read_network_counters", lambda: counters)
+    result = provider.sample()
+    assert result.network_bytes_per_second is None
+    assert "changed" in result.network_unavailable_reason
+
+
+def test_new_metric_failures_preserve_other_measurements(measured_windows, monkeypatch):
+    def unavailable():
+        raise OSError("native failure")
+
+    monkeypatch.setattr(awareness, "_read_disk", unavailable)
+    monkeypatch.setattr(awareness, "_read_network_counters", unavailable)
+    result = awareness.SystemMetricsProvider().sample()
+    assert result.disk_percent is None
+    assert result.network_bytes_per_second is None
+    assert result.memory_percent == 60
+    assert "unavailable" in result.network_unavailable_reason
+
+
+def test_network_native_sdk_structure_layout_matches_64bit_windows():
+    assert ctypes.sizeof(awareness._MibIfRow2) == 1352
+    assert awareness._MibIfRow2.in_octets.offset == 1208
+    assert awareness._MibIfRow2.out_octets.offset == 1280
+    assert awareness._MibIfTable2.table.offset == 8
+
+
+def test_native_network_query_reads_only_up_physical_counters_and_frees_table(monkeypatch):
+    class Table(ctypes.Structure):
+        _fields_ = [("num_entries", ctypes.c_uint32), ("table", awareness._MibIfRow2 * 4)]
+
+    table = Table()
+    table.num_entries = 4
+    for index, row in enumerate(table.table):
+        row.interface_luid = index + 1
+        row.type = 6
+        row.oper_status = 1
+        row.flags = 1
+        row.in_octets = 2**40 + index
+        row.out_octets = 2**41 + index
+    table.table[1].flags = 0  # virtual
+    table.table[2].oper_status = 2  # disconnected
+    table.table[3].type = 24  # loopback
+    freed = []
+
+    def get_table(pointer):
+        out = ctypes.cast(pointer, ctypes.POINTER(ctypes.POINTER(awareness._MibIfTable2)))
+        out[0] = ctypes.cast(ctypes.pointer(table), ctypes.POINTER(awareness._MibIfTable2))
+        return 0
+
+    def free_table(pointer):
+        freed.append(pointer)
+
+    monkeypatch.setattr(
+        awareness,
+        "_ip_helper",
+        lambda: SimpleNamespace(GetIfTable2=get_table, FreeMibTable=free_table),
+    )
+    assert awareness._read_network_counters() == {1: (2**40, 2**41)}
+    assert len(freed) == 1

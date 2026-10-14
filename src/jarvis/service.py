@@ -9,12 +9,14 @@ import time
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
+from typing import Callable
 from zoneinfo import ZoneInfo
 
 from .action_dispatcher import ALLOWED_ACTIONS, ActionDispatcher, action_summary
 from .action_router import parse_actions
 from .intelligence import SPEAKING_STYLES, describe_intent
 from .providers import (
+    MAX_STREAM_TEXT_CHARS,
     CancelSignal,
     ProviderCancelled,
     ProviderError,
@@ -86,8 +88,15 @@ class JarvisService:
         self.actions = ActionDispatcher(settings, store, engine)
 
     def chat(
-        self, message: str, session_id: str | None = None, cancel: CancelSignal | None = None
+        self,
+        message: str,
+        session_id: str | None = None,
+        cancel: CancelSignal | None = None,
+        *,
+        on_delta: Callable[[str], None] | None = None,
     ) -> dict:
+        if on_delta is not None and not callable(on_delta):
+            raise ServiceError("The streaming receiver must be callable.")
         if not isinstance(message, str) or not message.strip():
             raise ServiceError("Enter a message first.")
         if len(message) > MAX_MESSAGE_CHARS:
@@ -189,26 +198,59 @@ class JarvisService:
                     )
             started_at = time.monotonic()
             try:
-                reply = provider.generate(
-                    [
-                        {
-                            "role": "system",
-                            "content": SYSTEM_MESSAGE
-                            + " "
-                            + SPEAKING_STYLES[self.settings.speaking_style]
-                            + " Current local time: "
-                            + datetime.now(ZoneInfo(self.settings.timezone)).isoformat(
-                                timespec="minutes"
-                            ),
-                        },
-                        *memory_reference,
-                        *messages,
-                    ],
+                request_messages = [
+                    {
+                        "role": "system",
+                        "content": SYSTEM_MESSAGE
+                        + " "
+                        + SPEAKING_STYLES[self.settings.speaking_style]
+                        + " Current local time: "
+                        + datetime.now(ZoneInfo(self.settings.timezone)).isoformat(
+                            timespec="minutes"
+                        ),
+                    },
+                    *memory_reference,
+                    *messages,
+                ]
+                request_options = dict(
                     model=model,
                     timeout=self.settings.request_timeout,
                     max_output_tokens=self.settings.max_output_tokens,
                     cancel=signal,
                 )
+                stream = getattr(provider, "generate_stream", None)
+                if on_delta is not None and provider_name == "ollama" and callable(stream):
+                    emitted_chars = 0
+
+                    def emit(delta):
+                        nonlocal emitted_chars
+                        if signal.is_set():
+                            raise ProviderCancelled()
+                        if not isinstance(delta, str):
+                            raise ProviderError("Invalid streamed text.", "invalid_response")
+                        if not delta:
+                            return
+                        emitted_chars += len(delta)
+                        if emitted_chars > MAX_STREAM_TEXT_CHARS:
+                            raise ProviderError(
+                                "The provider text exceeded the application size limit.",
+                                "response_too_large",
+                            )
+                        try:
+                            on_delta(delta)
+                        except ProviderError:
+                            raise
+                        except Exception:
+                            raise ProviderError(
+                                "The response display could not receive streamed text.",
+                                "stream_receiver_error",
+                            ) from None
+
+                    reply = stream(request_messages, on_delta=emit, **request_options)
+                else:
+                    # Existing API, cloud and adapters without stream support
+                    # retain final-only behavior; no artificial deltas are made.
+                    reply = provider.generate(request_messages, **request_options)
                 if signal.is_set():
                     raise ProviderCancelled()
                 if not isinstance(reply, ProviderReply) or not reply.text.strip():

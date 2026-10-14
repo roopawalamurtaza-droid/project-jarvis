@@ -1,4 +1,33 @@
-# Current development and transfer state — 14 October 2026
+# Current development and transfer state — 15 October 2026
+
+## Phase 4.5 reference UI — 0.4.5
+
+Continue **codex/phase4-5-reference-ui** in the existing **public** repository
+https://github.com/roopawalamurtaza-droid/project-jarvis. The previous Phase 4
+branch and build are preserved. Read PHASE45_RELEASE.md and the visual spec.
+
+- Baseline **823 passed in 151.65s**; full source suite **949 passed in 114.92s**.
+  Ruff and all **86** formatting checks passed. Final small motion/tray changes
+  were covered by a subsequent **12-test** UI/identity pass; counts overlap.
+- Actual Windows renders were refined across first/second/final captures.
+  The last native source capture displayed a real local qwen3:8b streamed reply,
+  selected all **11** views and recorded a **0.062s** maximum UI timer gap.
+  Native Qt captures passed with scaling factors **1.25** and **1.5**. These are
+  application-scaling checks, not changes to Windows settings or proof for every display.
+- Original native graphics, five live dashboard panels, secure Markdown message
+  cards, functional quick actions and the shared movable mini are implemented.
+  Canva's original small sidebar illustration is packaged with provenance;
+  no screenshot wallpaper or remote design dependency is used.
+- New speech animation reads the actual Windows scalar peak for this PID only:
+  **172** samples, **143** positive, maximum **0.53837**, inactive unavailable.
+  No audio capture, other-process meter or second voice engine was added.
+- Cloud replies remain final-only; CPU temperature, screen vision, page research
+  and arbitrary browser/shell control remain unavailable. Broader acoustic,
+  physical-display, long-soak and fresh-machine checks remain separate.
+- Rebuild/deployment and new human acceptance are pending this source checkpoint;
+  update this section with the actual frozen identity and verification results.
+
+## Historical Phase 4 delivery
 
 ## Phase 4 Windows action engine — 0.4.0
 

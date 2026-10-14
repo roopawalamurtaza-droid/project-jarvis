@@ -86,6 +86,16 @@ def main(argv=None):
     )
     parser.add_argument("--chat", help="Send one real model message and print the actual result")
     parser.add_argument(
+        "--verify-reference-ui",
+        action="store_true",
+        help="Capture the actual Windows reference UI with isolated data and no microphone",
+    )
+    parser.add_argument(
+        "--verification-live",
+        action="store_true",
+        help="Also verify the configured local model's real UI streaming",
+    )
+    parser.add_argument(
         "--verify-phase4",
         action="store_true",
         help="Verify isolated Windows action diagnostics; --verification-actions permits real app/browser launches; no microphone",
@@ -130,6 +140,32 @@ def main(argv=None):
             print(f"Offline speech model ready: {download_speech_model(settings)}")
             return 0
         configure_logging(settings.data_dir)
+        if args.verify_reference_ui:
+            import runpy
+
+            diagnostic_dir = (
+                Path(__file__).parent
+                if getattr(sys, "frozen", False)
+                else Path(__file__).resolve().parents[2] / "scripts"
+            )
+            previous_args = sys.argv
+            sys.argv = [
+                "verify_phase45",
+                "--native",
+                "--data-dir",
+                str(settings.data_dir / "ui-verification"),
+                "--settings-from",
+                str(settings.data_dir),
+                "--output",
+                str(settings.data_dir / "phase45-ui.png"),
+            ]
+            if args.verification_live:
+                sys.argv.append("--live")
+            try:
+                runpy.run_path(str(diagnostic_dir / "verify_phase45.py"), run_name="__main__")
+            finally:
+                sys.argv = previous_args
+            return 0
         if args.verify_phase4:
             import runpy
 

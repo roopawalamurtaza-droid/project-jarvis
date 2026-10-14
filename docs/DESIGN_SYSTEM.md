@@ -1,75 +1,194 @@
-# JARVIS Ambient Intelligence design system
+# JARVIS reference command-center design system
 
-The Phase 3 interface continues the existing native PySide6 application. Its visual identity is original: restrained charcoal and midnight navy surfaces, cyan emphasis, silver text, amber approvals and red errors. ULTRON is an engineering codename, not a character, logo or voice. No Marvel artwork or copied screen design is used.
+Phase **4.5 / 0.4.5** recreates the user-supplied futuristic screenshot inside the
+existing native PySide6 application. The reference determines composition,
+proportions, hierarchy and lighting. It is not shipped as a wallpaper with hidden
+controls. The backend, memory, conversation session, Windows actions and one-use
+permissions remain the existing application. The requested **95% similarity is
+an objective, not a measured result**.
 
-## Source of truth
+The approximate reference measurements and comparison procedure are recorded in
+[PHASE45_VISUAL_SPEC.md](PHASE45_VISUAL_SPEC.md). Actual delivery evidence and
+remaining Windows acceptance gates belong to [PHASE45_RELEASE.md](../PHASE45_RELEASE.md)
+and [TESTING.md](../TESTING.md).
 
-`src/jarvis/ui_components.py` owns the reusable color tokens, Qt stylesheet and painted `CoreWidget`. `src/jarvis/desktop.py` supplies actual controller and job states. These are shipped application components; a concept board is not proof of functional integration.
+## Implementation ownership
 
-Canva design generation was attempted with an original, non-sensitive concept brief. The service call did not return a job identifier or completed artifact before interruption. No Canva moodboard is included or claimed as completed. Canva and Figma capabilities were discoverable, but no Figma design was required for the native implementation. Native vector painting is the delivered workflow and needs no remote design service at runtime.
+| Source | Responsibility |
+| --- | --- |
+| `src/jarvis/ui_components.py` | Palette, shared styles, cached painted energy core, measured waveform |
+| `src/jarvis/ui_shell.py` | Original vector icons, two-line navigation, quick cards, title bar, atmospheric footer |
+| `src/jarvis/ui_layout_style.py` | Reference glass panels, chat surfaces, greeting and composer styles |
+| `src/jarvis/ui_dashboard.py` | Five local-data intelligence cards, sparklines and exact task-ID signals |
+| `src/jarvis/ui_chat.py` | Native message cards, safe Markdown, copying and speech replay |
+| `src/jarvis/ui_mini.py` | Movable miniature view sharing the existing controller |
+| `src/jarvis/desktop.py` | Real data, security checks, navigation, window behavior and action wiring |
+| `src/jarvis/awareness.py` | Worker-side read-only CPU, RAM, disk, network and supported GPU measurements |
+| `src/jarvis/audio_meter.py` | Optional Windows peak values for this exact process's playback sessions |
 
-## Visual language
+PySide6/QPainter was retained to avoid a framework rewrite, a second backend or
+duplicate audio capture. Static core detail is cached by geometry, palette and
+display scale; bounded dynamic rings and glow are painted over it. No QML,
+WebEngine, OpenGL requirement or new third-party dependency was introduced.
+Native QPainter rendering is not a claim of a GPU shader pipeline or compositor
+blur. Glass depth comes from gradients, translucent strokes, borders and lighting.
 
-- Backgrounds: charcoal canvas, navy panels, slightly brighter inset controls.
-- Accent: cyan for selected navigation, the primary action and active assistant states; soft blue for informational detail.
-- Text: readable light foreground with muted secondary information. Essential state is conveyed in words as well as color.
-- Warning: amber for required approval; error: red for an actual failed operation. Muted microphone is subdued and explicitly named.
-- Geometry: rounded cards, thin quiet borders, consistent spacing and generous breathing room. No decorative random telemetry.
-- Type: native Windows Segoe UI; headings, body text and captions have a clear hierarchy. Text remains native Qt text rather than an image.
-- Spacing: use multiples of four logical pixels, with larger gaps between workflow groups. Compact mode reduces surrounding panels rather than shrinking readable controls.
-- Icons: original rings and the native application mark; text remains present for critical actions. No copyrighted character or logo assets.
+## Composition and geometry
 
-The stylesheet is the concrete palette and typography specification. Qt uses logical widget dimensions and native text rendering under Windows display scaling. The command center offers progressive disclosure through separate Assistant, Mission Control, Memory Explorer, Timeline, Workflows, System, Diagnostics, Business and Settings views. Compact mode and the background activation overlay share the core instead of introducing a different visual identity.
+The command center opens at **1440 × 840 logical pixels** with a **760 × 560**
+minimum. Its custom rounded shell contains a roughly 56px header, a 242px sidebar,
+a flexible central canvas and a 382px intelligence dashboard, separated by 12px
+gutters. The center keeps greeting/context/core/capabilities above the transcript,
+then the illuminated composer and 78–84px quick cards. Preferred core geometry is
+350 × 350 logical pixels; the hero area is 342px high at the target size.
 
-| Token | Value | Purpose |
+At smaller widths, optional telemetry and supporting capability text collapse;
+the dashboard is hidden below 1260px and its information remains accessible in
+Mission Control, System and Diagnostics. Sidebar width drops to 186px below
+1150px. Navigation scrolls when the available height is short. A shorter window
+reduces the hero to 260px. Controls and actual text remain native widgets.
+
+The retained compact command center opens around 460 × 550 with a 430 × 530
+minimum. It hides the reference header/sidebar/dashboard/quick cards, keeps the
+last response and input controls, and limits the core to 110px height. Expanding
+restores the new reference constraints and saved normal geometry. This compact
+window is distinct from the separate 204 × 214 miniature tool window.
+
+Frameless window controls invoke native minimize, maximize/restore and close.
+Title-bar dragging and edge resizing use Qt's system-move/resize calls. High-DPI
+icon variants and logical geometry support Qt scaling; physical 125%/150% display
+acceptance must be recorded separately from rendering tests.
+
+## Color, typography and imagery
+
+| Token | Value | Role |
 | --- | --- | --- |
-| background | `#0b1018` | Main canvas |
-| surface | `#111b29` | Grouped panels |
-| raised | `#172436` | Raised surfaces |
-| border | `#293b50` | Quiet boundaries |
-| text | `#e2edf7` | Primary text |
-| muted | `#a2b3c7` | Supporting text |
-| accent | `#78dce7` | Active state and primary actions |
-| blue | `#95b9f7` | Processing and tool state |
-| warning | `#efbf79` | Approval required |
-| error | `#f19a9e` | Actual error state |
-| spacing | `4, 8, 12, 16, 24, 32` | Logical-pixel spacing scale |
+| background | `#030c14` | Near-black midnight canvas |
+| surface | `#071724` | Dark glass panels |
+| raised | `#0c2132` | Inset controls |
+| border | `#173b51` | Quiet cyan-blue boundaries |
+| text | `#dceaf6` | Main text |
+| muted | `#8296ae` | Supporting information |
+| accent | `#20c9ff` | Current selection, core and primary actions |
+| blue | `#468dff` | Processing and execution detail |
+| warning | `#efb864` | Approval state |
+| error | `#ed737e` | Actual failure or muted warning detail |
+| spacing | `4, 8, 12, 16, 24, 32` | Shared logical-pixel spacing scale |
 
-The current stylesheet uses 13 logical pixels for body text, 23 for headings and 25 for the wordmark. The vector core fits a preferred 190 by 200 logical-pixel area and a 110-pixel-high compact area; its auxiliary text is smaller and must be checked under actual display scaling.
+Segoe UI provides actual text, with approximately 13px body text, 10–12px captions,
+24px greeting text and a spaced 23px JARVIS wordmark. Large surfaces use 11–16px
+corners, small cards 8–11px and the composer about 22px. Borders are normally one
+logical pixel. Bounded gradients and translucent strokes provide glow without
+heavy blur on each widget. Native keyboard focus and text labels remain visible.
 
-Compact mode has a 430 by 530 logical-pixel minimum and opens at 460 by 550. It hides the full transcript and navigation, retains the last reply and readable input controls, and places microphone controls separately from Send/Interrupt. Full navigation scrolls on short windows. A geometry regression verifies the compact controls do not overlap at the minimum size.
+All identity and control icons are original scalable vector geometry, including
+dashboard symbols and chat avatars. They do not depend on optional Unicode icon
+fonts, provider trademarks or movie artwork. A browser globe represents the
+configured browser rather than copying Chrome's logo.
 
-## Core state contract
+An original Canva scenery asset, **`MAHYBcOJP24`**, was created for this phase.
+Its small packaged derivative is `src/jarvis/assets/sidebar-canva.jpg`, used only
+inside the decorative sidebar footer. Vector terrain, lighting and identity
+complete that area. Canva is not contacted at runtime. This successful Phase 4.5
+asset supersedes the earlier Phase 3 generation attempt that produced no asset;
+no completed Phase 3 moodboard is retroactively claimed.
 
-The widget receives `set_state(name)`, `set_level(value)`, `clear_level()` and `set_reduce_motion(enabled)`. Its state input comes from real microphone, speech, conversation, approval and worker activity. A ring animation represents the named state; it is not a confidence score or evidence that an operation succeeded.
+## Truthful data contracts
 
-| State | Meaning | Visual behavior |
+The reference's Alex, GPT-4o, chat, running tasks, token count and resource values
+are illustrative. None becomes live application data. The greeting uses the
+configured timezone; no incidental personal name is inserted. The top bar and
+AI card show the configured provider/model, reported usage and measured latency.
+An untested health check says **Not checked**, a missing model says **Model
+missing**, and configured cloud credentials remain **Unverified** until tested.
+Full health detail remains available in the tooltip/diagnostics.
+
+Context and capability lists distinguish local memory, system access, permitted
+tools, scoped file reading, browser search and enabled routines. Screen vision
+and real-time page research are explicitly unavailable. Browser search means an
+authorized browser launch, not observed page reading or completed research.
+
+The dashboard accepts `update_activity(jobs, tasks, action_runs, workflow_runs,
+stopped=False)`, `update_system(system)` and `update_ai(provider, model, health,
+latency=None, usage=None)`. It performs no I/O or execution itself. Unknown
+progress remains indeterminate; completed plan steps may produce a real fraction.
+Rows and charts are bounded, and absent samples remain gaps rather than zero.
+System history retains at most 60 samples per chart. Refresh reads execute on
+workers, not the GUI thread.
+
+Disk means caller-available usage of the Windows system volume, including quota
+effects. Network means connected physical-interface RX + TX byte deltas, not
+packet content or a network speed estimate. The first interval and counter/
+adapter changes remain unavailable. CPU temperature has no supported source on
+the current implementation and displays an em dash. Native adapter identity is
+ephemeral inside the metrics provider and is not sent to the UI or persisted.
+
+Approval cards show the actual target, a concise one-use effect and a Details
+control. Approve/Deny emit the **exact task ID**, never a truncated identifier or
+an automatic authorization. Existing TaskEngine controls revalidate permission
+and target. External labels are literal text and bounded/elided. Markdown blocks
+may format assistant text, but embedded media cannot read local files or fetch
+remote resources; clicking a URL passes through the existing public-HTTPS
+validator and authorized website tool.
+
+## Voice and core states
+
+`CoreWidget` receives `set_state(name)`, `set_level(value)`, `clear_level()` and
+`set_reduce_motion(enabled)`. `WaveformWidget` receives the same state/level
+updates with a bounded measured history. The main core, title/composer waveforms
+and mini view consume the shared controller state. They never start an additional
+microphone or model request.
+
+| State | Actual meaning | Treatment |
 | --- | --- | --- |
-| idle | No request currently being processed | Quiet breathing |
-| wake | Authorized wake listening is active | Restrained readiness motion |
-| activated | Real wake activation was acknowledged | Brief acknowledgment |
-| listening | Actual command capture is active | Measured microphone amplitude when supplied |
-| thinking | A provider request is running | Controlled processing motion |
-| tool | A tool or workflow operation is running | Distinct execution motion |
-| speaking | Native speech playback is active | Playback-state motion; no invented PCM waveform |
-| approval | A concrete action requires a decision | Amber state and explicit label |
-| error | A real controller or operation error exists | Error text and red emphasis |
-| muted | Microphone disabled or listening paused | Unambiguous muted appearance |
+| idle | No active request | Restrained breathing and layered energy rings |
+| wake | Authorized wake capture is active | Subtle readiness motion and real mic RMS when available |
+| activated | Wake acknowledgment | Brief energy pulse |
+| listening | Command/follow-up capture | Measured mic RMS drives light and waveform |
+| thinking | Model generation/transcription | Controlled ring motion |
+| tool | Task or routine is executing | Execution ring emphasis |
+| speaking | Windows speech playback | Own-process measured peak when available; otherwise named state |
+| approval | Exact pending action awaits a decision | Amber state and explicit decision card |
+| error | Actual voice/operation failure | Restrained red warning |
+| muted | Voice/microphone muted | Dim core and explicit muted state |
 
-`set_level()` accepts only a measured input. Clear the level when audio is unavailable, capture is disabled, or playback has no PCM measurement. The current native speech backend does not expose output amplitude, so speaking is labeled as playback state rather than presenting a fabricated waveform. Measured microphone level is not a transcription-success claim.
+Microphone RMS and playback peak are different scalar measurements. Windows
+`IAudioMeterInformation` may provide playback peaks only after an active,
+non-system session reports this exact JARVIS PID. This does not capture PCM,
+activate endpoint-wide metering, monitor another application's sound, change
+volume or bypass microphone permission. Unavailable meters remain unavailable;
+ornamental rotation is never an audio sample or proof of successful recognition.
 
-## Motion and accessibility
+The trimmed main composer uses an input microphone control. Right-click it and
+choose **Show voice controls** or **Voice settings**. The revealed control row
+provides pause/resume and mute, with the retained **Hold to talk** path and
+**Speak replies** setting. Hands-free
+capture still requires saved opt-in. The **Mini** sidebar control pins the shared
+miniature view. Tray/background activation uses the same engine. Optional
+always-on-top follows the existing compact setting; close/dismiss hides the mini
+without creating another backend.
 
-Reduced motion disables the widget timer. Hidden widgets stop animating; bringing the widget back makes the timer depend on the current state and preference. Idle motion uses eight frames per second, wake listening twelve and active states twenty. Muted, error and approval states do not run an animation timer. State changes and text continue to work with animation disabled. The painted core fits the available rectangle in compact and full layouts.
+## Motion, accessibility and validation
 
-Keyboard focus remains visible. Text entry, navigation, approvals, interrupt and emergency stop remain native accessible controls. `Ctrl+K` opens the command palette. A mouse or microphone is not required to use the command center. Warning and error states never depend on color alone.
+The core timer is capped at about 60 FPS during visible active animation, 12 FPS
+for wake readiness and 8 FPS idle. Hidden/minimized widgets stop ornamental
+timers. Muted/error/approval states remain static. Reduced motion stops the core
+timer, hover transitions and busy progress animation while real state/text
+updates continue. Waveforms have no random-motion timer; only measured samples
+change their history.
 
-The delivered palette is dark. A tested light theme is not implemented; changing application colors arbitrarily is not a supported light rendering mode. Additional scaling, contrast, screen-reader and reduced-motion acceptance on diverse Windows displays must be recorded as actual tests, not inferred from Qt support.
+Enter sends; Shift+Enter inserts a line. Ctrl+K opens the command palette. Native
+focus, copy, speech replay, scrolling, resize and navigation remain functional.
+Streaming text is received from Ollama's real NDJSON response; cloud adapters
+currently deliver a final response. A streaming view is not fabricated typing.
 
-Actual offscreen native renders were inspected at Qt scaling factors 1, 1.5 and 2. This checks widget rendering, not physical-display or screen-reader acceptance. Two isolated 12-second idle UI samples used 1.69% of one logical core / 93.56 MiB working set with motion, then 0.91% / 93.57 MiB with reduced motion and the core timer off. Microphone, STT and provider activity were inactive; no packaged long-soak or voice-resource claim follows from these samples.
-
-## Honest presence and privacy
-
-Opening a window does not authorize microphone capture, clipboard access, screen capture or foreground-window context. The presence follows existing opt-in settings. Returning to the tray keeps only explicitly authorized background listening; the overlay displays actual activation and can be dismissed. System metrics are retrieved values, with unavailable information identified. No random graphs, fabricated progress or simulated speech activity is shown.
-
-Future changes must preserve this boundary: state feedback explains a real operation, and measured visualization requires a real source. If a source is unavailable, show its absence plainly.
+The inspected source captures include an offscreen first render, normal Windows
+second/final captures and a separately captured mini widget. They validate the
+actual source UI and were compared with the supplied image for geometry, hierarchy,
+color and depth. They do not establish a numerical similarity, frozen-build
+delivery or human voice acceptance. Remaining differences include stylized vector
+orb lighting, real provider/empty data, original icons and the scrollable transcript.
+Read the release record for current test results and remaining gates. Older Phase
+3 scaling and idle-resource samples remain historical evidence, not measurements
+of the new renderer. Diverse physical DPI, screen-reader and long-soak checks
+remain separate acceptance work; no tested light theme is implemented.

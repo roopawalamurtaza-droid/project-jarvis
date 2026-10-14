@@ -7,14 +7,17 @@ a provider merely because the window opens.
 
 from __future__ import annotations
 
+import inspect
 import json
 import sys
 import threading
 import time
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable
+from zoneinfo import ZoneInfo
 
-from PySide6.QtCore import QObject, QRunnable, Qt, QThreadPool, QTimer, QUrl, Signal
+from PySide6.QtCore import QEvent, QObject, QRunnable, Qt, QThreadPool, QTimer, QUrl, Signal
 from PySide6.QtGui import (
     QAction,
     QCloseEvent,
@@ -27,7 +30,6 @@ from PySide6.QtGui import (
     QPainter,
     QPixmap,
     QShortcut,
-    QTextCharFormat,
 )
 from PySide6.QtWidgets import (
     QApplication,
@@ -38,6 +40,7 @@ from PySide6.QtWidgets import (
     QFileDialog,
     QFormLayout,
     QFrame,
+    QGridLayout,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -55,7 +58,6 @@ from PySide6.QtWidgets import (
     QTableWidget,
     QTableWidgetItem,
     QTabWidget,
-    QTextEdit,
     QVBoxLayout,
     QWidget,
 )
@@ -105,20 +107,22 @@ class _JobSignals(QObject):
     succeeded = Signal(object)
     failed = Signal(str)
     finished = Signal()
+    delta = Signal(str)
 
 
 class _Job(QRunnable):
-    def __init__(self, action: Callable[[], Any], owner: QObject | None = None):
+    def __init__(self, action: Callable[..., Any], owner: QObject | None = None, *, stream=False):
         super().__init__()
         self.action = action
         # The pool destroys its runnable on a worker. Keep the GUI-affine
         # signal object owned by the window until deferred GUI-thread cleanup.
         self.signals = _JobSignals(owner)
         self.cancel = threading.Event()
+        self.stream = stream
 
     def run(self) -> None:
         try:
-            result = self.action()
+            result = self.action(self.signals.delta.emit) if self.stream else self.action()
         except Exception as exc:
             # Backend and voice errors provide safe user-facing summaries.
             self.signals.failed.emit(str(exc) or type(exc).__name__)
@@ -243,6 +247,10 @@ class MainWindow(QMainWindow):
         self._pending_application_id: str | None = None
         self._action_runs: list[dict[str, Any]] = []
         self._action_health: dict[str, Any] = {}
+        self._mini_pinned = False
+        self._mini_positioned = False
+        self._show_voice_controls = False
+        self._last_dashboard_key = None
         from .awareness import DesktopContextProvider, SystemMetricsProvider
         from .workflows import WorkflowEngine
 
@@ -257,14 +265,17 @@ class MainWindow(QMainWindow):
         self.health_result = {"backend": "Health check pending", "speech_model": "Not checked"}
         self.setWindowTitle("JARVIS · Command Center")
         self.setWindowIcon(_icon())
-        self.resize(1180, 800)
+        self.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)
+        self.resize(1440, 840)
         self.setMinimumSize(760, 560)
         from .ui_components import STYLE as PHASE3_STYLE
+        from .ui_layout_style import STYLE as LAYOUT_STYLE
 
-        self.setStyleSheet(PHASE3_STYLE)
+        self.setStyleSheet(PHASE3_STYLE + LAYOUT_STYLE)
         self._build()
         self._build_tray()
         self._build_overlay()
+        QApplication.instance().installEventFilter(self)
         self._shutdown_timer = QTimer(self)
         self._shutdown_timer.setInterval(100)
         self._shutdown_timer.timeout.connect(self._poll_shutdown)
@@ -280,6 +291,10 @@ class MainWindow(QMainWindow):
         from .voice_controller import VoiceController
 
         self.voice_controller = VoiceController(self)
+        self._visual_audio_timer = QTimer(self)
+        self._visual_audio_timer.setInterval(40)
+        self._visual_audio_timer.timeout.connect(self._update_visual_audio)
+        self._apply_motion_preferences()
         self._presence_timer = QTimer(self)
         self._presence_timer.setInterval(160)
         self._presence_timer.timeout.connect(self._update_presence)
@@ -299,21 +314,60 @@ class MainWindow(QMainWindow):
         # Reads are asynchronous; initial paint does not wait for the database.
         QTimer.singleShot(0, self.refresh)
 
+    def _apply_motion_preferences(self):
+        reduced = self.settings.reduce_motion
+        for widget in [
+            self.core,
+            self.ambient_overlay,
+            self.header_waveform,
+            self.input_waveform,
+            self.dashboard,
+            *self.nav,
+            *self.quick_cards,
+        ]:
+            if hasattr(widget, "set_reduce_motion"):
+                widget.set_reduce_motion(reduced)
+
+    def _update_visual_audio(self):
+        if self._closing:
+            return
+        state = self.core.state
+        capture = self.voice_controller.input
+        if state == "speaking":
+            level = getattr(self._speech, "level", None) if self._speech else None
+        elif capture and capture.running and capture.mode != "gated":
+            level = capture.level
+        else:
+            level = None
+        for widget in (self.core, self.ambient_overlay, self.header_waveform, self.input_waveform):
+            widget.clear_level() if level is None else widget.set_level(level)
+
     def _build(self) -> None:
-        central = QWidget()
+        from .ui_components import WaveformWidget
+        from .ui_dashboard import IntelligenceDashboard
+        from .ui_shell import HeaderBar, NavButton, SidebarAtmosphere
+
+        central = QFrame()
+        central.setObjectName("MainShell")
         self.setCentralWidget(central)
-        outer = QHBoxLayout(central)
-        outer.setContentsMargins(0, 0, 0, 0)
-        outer.setSpacing(0)
+        shell = QVBoxLayout(central)
+        shell.setContentsMargins(6, 0, 6, 6)
+        shell.setSpacing(6)
+        self.top_bar = HeaderBar(self.build_info["version"], window_controls=True)
+        self.top_bar.minimize_requested.connect(self.showMinimized)
+        self.top_bar.maximize_requested.connect(self._toggle_maximized)
+        self.top_bar.close_requested.connect(self.close)
+        self.header_waveform = WaveformWidget()
+        self.header_waveform.setFixedSize(70, 28)
+        self.top_bar.waveform_host.addWidget(self.header_waveform)
+        shell.addWidget(self.top_bar)
+        outer = QHBoxLayout()
+        outer.setSpacing(12)
         self.sidebar = QFrame()
         self.sidebar.setObjectName("Sidebar")
-        self.sidebar.setFixedWidth(190)
         side = QVBoxLayout(self.sidebar)
-        side.setContentsMargins(16, 24, 16, 18)
-        side.addWidget(_label("JARVIS", "Brand"))
-        side.addWidget(_label("AMBIENT INTELLIGENCE", "Muted"))
-        side.addSpacing(27)
-        self.nav: list[QPushButton] = []
+        side.setContentsMargins(10, 18, 10, 10)
+        side.setSpacing(5)
         self.page_titles = (
             "Assistant",
             "Mission Control",
@@ -325,39 +379,60 @@ class MainWindow(QMainWindow):
             "Diagnostics",
             "Business",
             "Application Library",
+            "Browser",
         )
-        for index, title in enumerate(self.page_titles):
-            button = QPushButton(title)
-            button.setObjectName("Nav")
-            button.setCheckable(True)
+        # Stable controller page indexes preserve all prior views and tests.
+        self.nav = [QPushButton(title) for title in self.page_titles]
+        visible_nav = (
+            (0, "Assistant", "Chat • Voice • Vision", "home"),
+            (1, "Mission Control", "System • Tasks • Overview", "mission"),
+            (2, "Memory", "Knowledge • Context", "memory"),
+            (5, "Automations", "Routines • Triggers", "automation"),
+            (9, "Workspaces", "Projects • Files • Apps", "workspace"),
+            (10, "Browser", "Web • Research • Summarize", "browser"),
+            (4, "Settings", "Personalize • Models • Tools", "settings"),
+        )
+        for index, title, subtitle, icon in visible_nav:
+            self.nav[index].deleteLater()
+            button = NavButton(title, subtitle, icon)
+            button.setFixedHeight(62)
             button.clicked.connect(lambda checked=False, i=index: self._navigate(i))
-            self.nav.append(button)
+            self.nav[index] = button
             side.addWidget(button)
-        side.addStretch()
-        self.privacy_label = _label("", "Muted", True)
+        for index in (3, 6, 7, 8):
+            self.nav[index].setParent(self.sidebar)
+            self.nav[index].hide()
+        side.addStretch(1)
+        self.sidebar_atmosphere = SidebarAtmosphere()
+        self.sidebar_atmosphere.setFixedHeight(220)
+        side.addWidget(self.sidebar_atmosphere)
+        self.privacy_label = _label("", "SidebarPrivacy", True)
         side.addWidget(self.privacy_label)
-        side.addSpacing(12)
-        side.addWidget(_button("Commands · Ctrl K", self.command_palette))
-        side.addWidget(_button("Compact assistant", self.toggle_compact))
-        side.addWidget(_button("Emergency stop", self.emergency_stop, kind="Danger"))
+        self.privacy_label.hide()
+        utility = QHBoxLayout()
+        command = _button("⌘ Commands", self.command_palette)
+        command.setObjectName("QuietButton")
+        self.mini_button = _button("Mini", self.toggle_mini)
+        self.mini_button.setObjectName("QuietButton")
+        utility.addWidget(command, 1)
+        utility.addWidget(self.mini_button)
+        side.addLayout(utility)
         self.sidebar_scroll = QScrollArea()
+        self.sidebar_scroll.setObjectName("SidebarScroll")
         self.sidebar_scroll.setWidgetResizable(True)
-        self.sidebar_scroll.setFixedWidth(205)
+        self.sidebar_scroll.setFixedWidth(242)
+        self.sidebar_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.sidebar_scroll.setWidget(self.sidebar)
         outer.addWidget(self.sidebar_scroll)
         main = QVBoxLayout()
         self._main_layout = main
-        main.setContentsMargins(28, 24, 28, 18)
-        main.setSpacing(16)
+        main.setContentsMargins(8, 8, 8, 2)
+        main.setSpacing(6)
         self.title_label = _label("Assistant", "Title")
-        self.status_label = _label("Ready · microphone off", "Status", True)
-        header = QHBoxLayout()
-        header.addWidget(self.title_label)
-        header.addStretch()
+        self.title_label.hide()
         self.expand_button = _button("Expand", self.toggle_compact)
         self.expand_button.hide()
-        header.addWidget(self.expand_button)
-        main.addLayout(header)
+        main.addWidget(self.expand_button, 0, Qt.AlignmentFlag.AlignRight)
         self.pages = QStackedWidget()
         self.pages.addWidget(self._assistant_page())
         self.pages.addWidget(self._activity_page())
@@ -369,65 +444,163 @@ class MainWindow(QMainWindow):
         self.pages.addWidget(self._diagnostics_page())
         self.pages.addWidget(self._business_page())
         self.pages.addWidget(self._applications_page())
+        self.pages.addWidget(self._browser_page())
+        main.addWidget(self.title_label)
         main.addWidget(self.pages, 1)
+        self.status_label = _label("Ready · microphone off", "FooterStatus", True)
         main.addWidget(self.status_label)
         outer.addLayout(main, 1)
+        self.dashboard = IntelligenceDashboard()
+        self.dashboard.setFixedWidth(382)
+        self.dashboard.approve_requested.connect(
+            lambda identity: self._dashboard_task_operation(identity, "approve")
+        )
+        self.dashboard.deny_requested.connect(
+            lambda identity: self._dashboard_task_operation(identity, "reject")
+        )
+        self.dashboard.task_selected.connect(self._dashboard_select_task)
+        self.dashboard.details_requested.connect(self._dashboard_details)
+        outer.addWidget(self.dashboard)
+        shell.addLayout(outer, 1)
         self._navigate(0)
         self._update_privacy_label()
 
     def _assistant_page(self) -> QWidget:
-        from .ui_components import CoreWidget
+        from .ui_chat import ChatTranscript
+        from .ui_components import CoreWidget, WaveformWidget
+        from .ui_shell import QuickActionCard, make_icon
 
-        page = QWidget()
+        page = QFrame()
+        page.setObjectName("AssistantCanvas")
         layout = QVBoxLayout(page)
-        layout.setContentsMargins(0, 0, 0, 0)
-        tools = QHBoxLayout()
-        self.assistant_heading = _label("YOUR COMMAND SPACE", "Muted")
-        tools.addWidget(self.assistant_heading)
-        tools.addStretch()
-        self.new_conversation_button = _button("New conversation", self.new_conversation)
-        tools.addWidget(self.new_conversation_button)
-        layout.addLayout(tools)
-        self.presence_panel = QFrame()
-        self.presence_panel.setObjectName("Panel")
-        presence = QHBoxLayout(self.presence_panel)
-        self.core = CoreWidget()
-        self.core.set_reduce_motion(self.settings.reduce_motion)
-        presence.addWidget(self.core)
+        layout.setContentsMargins(10, 10, 10, 10)
+        layout.setSpacing(10)
+        self.assistant_heading = _label("", "Muted")
+        self.assistant_heading.hide()
+        self.presence_panel = QWidget()
+        self.presence_panel.setObjectName("PresenceDetail")
+        presence = QGridLayout(self.presence_panel)
+        presence.setContentsMargins(0, 0, 0, 0)
+        presence.setHorizontalSpacing(4)
+        presence.setVerticalSpacing(8)
+        self.presence_panel.setFixedHeight(342)
         self.presence_details = QWidget()
         self.presence_details.setObjectName("PresenceDetail")
         detail = QVBoxLayout(self.presence_details)
-        detail.addWidget(_label("Intelligence, under your control", "Title", True))
-        self.presence_caption = _label("Ready for a request · microphone off", "Muted", True)
-        detail.addWidget(self.presence_caption)
-        self.context_ribbon = _label("CONTEXT · No project selected", "Status", True)
+        detail.setContentsMargins(0, 10, 0, 0)
+        detail.setSpacing(7)
+        self.greeting_label = _label("", "Greeting", True)
+        detail.addWidget(self.greeting_label)
+        detail.addWidget(_label("How can I help you today?", "GreetingSubtitle", True))
+        detail.addSpacing(28)
+        detail.addWidget(_label("CONTEXT ONLINE", "SectionEyebrow"))
+        self.context_status_labels = {}
+        for key, title in (
+            ("memory", "Personal Knowledge"),
+            ("system", "System Access"),
+            ("web", "Real-time Web"),
+            ("tools", "Tool Execution"),
+        ):
+            label = _label(title, "Capability", True)
+            self.context_status_labels[key] = label
+            detail.addWidget(label)
+        detail.addStretch()
+        detail.addWidget(_label("“Same goals.\nHigher efficiency.”", "ReferenceQuote", True))
+        self.context_ribbon = _label("CONTEXT · No project selected", "Muted", True)
+        self.context_ribbon.hide()
         detail.addWidget(self.context_ribbon)
+        presence.addWidget(self.presence_details, 0, 0)
+        self.core = CoreWidget()
+        self.core.set_reduce_motion(self.settings.reduce_motion)
+        presence.addWidget(self.core, 0, 1)
+        self.capability_panel = QWidget()
+        self.capability_panel.setObjectName("PresenceDetail")
+        capabilities = QVBoxLayout(self.capability_panel)
+        capabilities.setContentsMargins(0, 18, 0, 0)
+        capabilities.setSpacing(7)
+        capabilities.addWidget(
+            _label("“Ideas, tasks, knowledge —\nall connected.”", "ReferenceQuote", True)
+        )
+        capabilities.addSpacing(26)
+        capabilities.addWidget(_label("CAPABILITIES ACTIVE", "SectionEyebrow"))
+        self.capability_labels = {}
+        for key, title in (
+            ("reasoning", "Reasoning"),
+            ("files", "File Analysis"),
+            ("search", "Web Search"),
+            ("automation", "Automation"),
+            ("control", "Computer Control"),
+            ("vision", "Vision (Screen)"),
+        ):
+            label = _label(title, "Capability", True)
+            self.capability_labels[key] = label
+            capabilities.addWidget(label)
+        capabilities.addStretch()
+        presence.addWidget(self.capability_panel, 0, 2)
+        presence.setColumnStretch(0, 5)
+        presence.setColumnStretch(1, 10)
+        presence.setColumnStretch(2, 4)
+        layout.addWidget(self.presence_panel, 3)
+        self.presence_caption = _label("Ready · microphone off", "Muted", True)
+        self.presence_caption.hide()
         self.provider_ribbon = _label("", "Muted", True)
-        detail.addWidget(self.provider_ribbon)
-        quick = QHBoxLayout()
-        quick.addWidget(_button("Choose project", lambda: self._navigate(5)))
-        quick.addWidget(_button("Review approvals", lambda: self._navigate(1)))
-        detail.addLayout(quick)
-        presence.addWidget(self.presence_details, 1)
-        layout.addWidget(self.presence_panel)
-        self.conversation = QTextEdit()
-        self.conversation.setObjectName("Conversation")
-        self.conversation.setReadOnly(True)
-        self.conversation.setAcceptRichText(False)
-        layout.addWidget(self.conversation, 1)
+        self.provider_ribbon.hide()
+        self.conversation = ChatTranscript()
+        self.conversation.replay_requested.connect(self._replay_message)
+        self.conversation.link_requested.connect(self._chat_link)
+        layout.addWidget(self.conversation, 2)
         self.compact_response = _label("Ready for your request", "Muted", True)
         self.compact_response.hide()
         layout.addWidget(self.compact_response, 1)
-        panel = QFrame()
-        panel.setObjectName("Panel")
-        composer_layout = QVBoxLayout(panel)
+        self.composer_panel = QFrame()
+        self.composer_panel.setObjectName("ComposerPanel")
+        composer_layout = QVBoxLayout(self.composer_panel)
+        composer_layout.setContentsMargins(10, 6, 10, 6)
+        composer_layout.setSpacing(5)
+        entry = QHBoxLayout()
+        entry.setSpacing(6)
+        self.attach_button = _button("", self._attach_file)
+        self.attach_button.setIcon(make_icon("attachment"))
+        self.attach_button.setObjectName("IconButton")
+        self.attach_button.setToolTip("Preview a permitted text file locally")
+        self.attach_button.setAccessibleName("Attach a local file for review")
+        entry.addWidget(self.attach_button)
         self.composer = _Composer()
         self.composer.setObjectName("MessageInput")
-        self.composer.setPlaceholderText("Ask JARVIS…  Enter to send · Shift+Enter for a new line")
-        self.composer.setFixedHeight(96)
+        self.composer.setPlaceholderText("Message JARVIS…  Enter to send")
+        self.composer.setFixedHeight(46)
         self.composer.submitted.connect(self.send_message)
-        composer_layout.addWidget(self.composer)
-        buttons = QHBoxLayout()
+        entry.addWidget(self.composer, 1)
+        self.input_waveform = WaveformWidget()
+        self.input_waveform.setFixedSize(92, 32)
+        entry.addWidget(self.input_waveform)
+        self.input_mic_toggle = _button("", self._mini_mute)
+        self.input_mic_toggle.setIcon(make_icon("mic"))
+        self.input_mic_toggle.setObjectName("IconButton")
+        self.input_mic_toggle.setFixedSize(32, 36)
+        self.input_mic_toggle.setAccessibleName("Mute or resume hands-free microphone")
+        self.input_mic_toggle.setToolTip(
+            "Mute or resume listening · right-click for voice controls"
+        )
+        self.input_mic_toggle.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.input_mic_toggle.customContextMenuRequested.connect(self._voice_menu)
+        entry.addWidget(self.input_mic_toggle)
+        self.interrupt_button = _button("Stop", self.interrupt)
+        self.interrupt_button.setObjectName("Interrupt")
+        self.interrupt_button.setToolTip("Interrupt active speech, generation or actions")
+        entry.addWidget(self.interrupt_button)
+        self.send_button = _button("", self.send_message, kind="Primary")
+        self.send_button.setIcon(make_icon("send", "#002a40"))
+        self.send_button.setAccessibleName("Send message")
+        self.send_button.setToolTip("Send message · Enter")
+        self.send_button.setFixedSize(42, 42)
+        entry.addWidget(self.send_button)
+        composer_layout.addLayout(entry)
+        self.voice_control_row = QWidget()
+        self.voice_control_row.setObjectName("PresenceDetail")
+        buttons = QHBoxLayout(self.voice_control_row)
+        buttons.setContentsMargins(0, 0, 0, 0)
+        buttons.setSpacing(5)
         self.mic_button = QPushButton("Hold to talk")
         self.mic_button.setObjectName("Microphone")
         self.mic_button.pressed.connect(self.start_recording)
@@ -437,23 +610,217 @@ class MainWindow(QMainWindow):
         self.speak_check.setChecked(bool(self.settings.speech_enabled))
         self.speak_check.toggled.connect(self._speech_toggled)
         buttons.addWidget(self.speak_check)
-        self.listen_button = _button("Resume listening", lambda: self.voice_controller.toggle())
+        self.listen_button = _button("Listen", lambda: self.voice_controller.toggle())
         buttons.addWidget(self.listen_button)
         buttons.addWidget(_button("Mute", lambda: self.voice_controller.mute()))
         buttons.addStretch()
-        composer_layout.addLayout(buttons)
-        response_controls = QHBoxLayout()
-        self.voice_status = _label("Voice: Idle · microphone off", "Muted", True)
-        response_controls.addWidget(self.voice_status, 1)
-        self.interrupt_button = _button("Interrupt", self.interrupt)
-        self.interrupt_button.setObjectName("Interrupt")
-        response_controls.addWidget(self.interrupt_button)
-        self.send_button = _button("Send", self.send_message, kind="Primary")
-        self.send_button.setObjectName("Primary")
-        response_controls.addWidget(self.send_button)
-        composer_layout.addLayout(response_controls)
-        layout.addWidget(panel)
+        self.new_conversation_button = _button("New chat", self.new_conversation)
+        self.new_conversation_button.setObjectName("QuietButton")
+        buttons.addWidget(self.new_conversation_button)
+        composer_layout.addWidget(self.voice_control_row)
+        self.voice_control_row.hide()
+        self.voice_status = _label("Voice: Idle · microphone off", "VoiceStatus", True)
+        composer_layout.addWidget(self.voice_status)
+        self.voice_status.hide()
+        layout.addWidget(self.composer_panel)
+        self.quick_actions = QWidget()
+        self.quick_actions.setObjectName("PresenceDetail")
+        quick = QHBoxLayout(self.quick_actions)
+        quick.setContentsMargins(0, 0, 0, 0)
+        quick.setSpacing(8)
+        cards = (
+            ("Open Browser", "Launch browser", "browser", self._quick_browser),
+            ("Coding Mode", "Your dev workspace", "code", self._quick_coding),
+            ("Study Mode", "Approved routine", "study", self._quick_study),
+            ("Search Web", "Find on the web", "search", lambda: self._navigate(10)),
+            ("Start Routine", "Your automations", "routine", lambda: self._navigate(5)),
+        )
+        self.quick_cards = []
+        for title, subtitle, icon, callback in cards:
+            card = QuickActionCard(title, subtitle, icon)
+            card.clicked.connect(callback)
+            self.quick_cards.append(card)
+            quick.addWidget(card, 1)
+        layout.addWidget(self.quick_actions)
         return page
+
+    def _toggle_maximized(self):
+        self.showNormal() if self.isMaximized() else self.showMaximized()
+
+    def _voice_menu(self, point):
+        menu = QMenu(self)
+        details = menu.addAction(
+            "Hide voice controls" if self._show_voice_controls else "Show voice controls"
+        )
+        details.triggered.connect(self._toggle_voice_controls)
+        menu.addAction("Voice settings", lambda: self._navigate(4))
+        menu.exec(self.input_mic_toggle.mapToGlobal(point))
+
+    def _toggle_voice_controls(self):
+        self._show_voice_controls = not self._show_voice_controls
+        self.voice_control_row.setVisible(self._show_voice_controls or self._compact)
+        self.voice_status.setVisible(self._show_voice_controls or self._compact)
+
+    def eventFilter(self, watched, event):
+        if (
+            event.type() == QEvent.Type.MouseButtonPress
+            and event.button() == Qt.MouseButton.LeftButton
+            and isinstance(watched, QWidget)
+            and watched.window() is self
+            and not self.isMaximized()
+        ):
+            point = self.mapFromGlobal(event.globalPosition().toPoint())
+            edges = Qt.Edge(0)
+            if point.x() <= 5:
+                edges |= Qt.Edge.LeftEdge
+            elif point.x() >= self.width() - 6:
+                edges |= Qt.Edge.RightEdge
+            if point.y() <= 5:
+                edges |= Qt.Edge.TopEdge
+            elif point.y() >= self.height() - 6:
+                edges |= Qt.Edge.BottomEdge
+            if edges and self.windowHandle():
+                return self.windowHandle().startSystemResize(edges)
+        return super().eventFilter(watched, event)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        if not hasattr(self, "dashboard") or self._compact:
+            return
+        full = self.width() >= 1260
+        self.dashboard.setVisible(full)
+        self.sidebar_scroll.setFixedWidth(242 if self.width() >= 1150 else 186)
+        self.capability_panel.setVisible(self.width() >= 1020)
+        self.presence_panel.setFixedHeight(342 if self.height() >= 790 else 260)
+        self.input_waveform.setVisible(self.width() >= 1000)
+
+    def _browser_page(self):
+        page = QFrame()
+        page.setObjectName("Panel")
+        layout = QVBoxLayout(page)
+        layout.addWidget(_label("BROWSER", "Title"))
+        layout.addWidget(
+            _label(
+                "Search results open in your configured browser. JARVIS does not yet read pages, "
+                "summarize websites or control authenticated sessions.",
+                "Muted",
+                True,
+            )
+        )
+        self.browser_query = QLineEdit()
+        self.browser_query.setPlaceholderText("What would you like to search for?")
+        self.browser_query.returnPressed.connect(self._browser_search)
+        layout.addWidget(self.browser_query)
+        row = QHBoxLayout()
+        row.addWidget(_button("Search web", self._browser_search, kind="Primary"))
+        row.addWidget(_button("Open browser", self._quick_browser))
+        row.addWidget(_button("Review execution", lambda: self._navigate(1)))
+        row.addStretch()
+        layout.addLayout(row)
+        layout.addWidget(_label("Website shortcuts · existing permissions apply", "SectionEyebrow"))
+        sites = QHBoxLayout()
+        for title, alias in (("YouTube", "youtube"), ("GitHub", "github"), ("Python", "python")):
+            sites.addWidget(
+                _button(
+                    title,
+                    lambda checked=False, target=alias: self._explicit_tool(
+                        "open_website", {"target": target}
+                    ),
+                )
+            )
+        sites.addStretch()
+        layout.addLayout(sites)
+        self.browser_result = _label("No browser request made in this window.", "Muted", True)
+        layout.addWidget(self.browser_result)
+        layout.addStretch()
+        return page
+
+    def _explicit_tool(self, tool, arguments):
+        if self._transition_busy() or self._closing:
+            return
+        if self._stopped:
+            self._status("Emergency stop is active. Resume in Mission Control first.")
+            return
+        self._run("action", lambda: self.engine.submit(tool, arguments), self._task_result)
+
+    def _browser_search(self):
+        query = self.browser_query.text().strip()
+        if not query:
+            self._status("Enter search words first.")
+            return
+        self._explicit_tool("search_web", {"query": query})
+
+    def _quick_browser(self):
+        browser = self.settings.default_browser
+        if browser == "default":
+            self._explicit_tool("open_website", {"target": "google"})
+        else:
+            self._explicit_tool("open_app", {"app": browser})
+
+    def _quick_coding(self):
+        if self.composer.toPlainText().strip():
+            self._navigate(5)
+            self._status("Your draft is retained. Choose and run a reviewed development routine.")
+            return
+        self._navigate(0)
+        self.composer.setPlainText("Prepare my development environment")
+        self.send_message()
+
+    def _quick_study(self):
+        routines = [
+            r
+            for r in self._routines
+            if r.get("enabled")
+            and (r.get("kind") == "study" or "study" in r.get("name", "").casefold())
+        ]
+        self._navigate(5)
+        if len(routines) == 1:
+            self.routine_choice.setCurrentIndex(self.routine_choice.findData(routines[0]["id"]))
+            self.run_routine()
+        else:
+            self._status(
+                "Choose a reviewed, enabled study routine. No routine was started automatically."
+            )
+
+    def _attach_file(self):
+        filename, _ = QFileDialog.getOpenFileName(self, "Preview a permitted local text file")
+        if filename:
+            self._navigate(1)
+            self._explicit_tool("read_file", {"path": filename})
+
+    def _replay_message(self, text):
+        if self._stopped or self.voice_controller.session.state.value == "MUTED":
+            self._status("Voice is muted. Resume it before replaying speech.")
+            return
+        if self.voice_controller.active:
+            self.voice_controller.speak(text)
+        else:
+            self._speak(text)
+
+    def _chat_link(self, target):
+        from .browser_actions import validate_external_url
+
+        try:
+            target = validate_external_url(target)
+        except (ValueError, PermissionError):
+            self._status("That link is not a permitted public HTTPS website.")
+            return
+        self._explicit_tool("open_website", {"target": target})
+
+    def _dashboard_select_task(self, identity):
+        for row, task in enumerate(self._tasks):
+            if task.get("id") == identity:
+                self.task_table.selectRow(row)
+                return True
+        self._status("This task is no longer in the current task list. Refresh Mission Control.")
+        return False
+
+    def _dashboard_task_operation(self, identity, operation):
+        if self._dashboard_select_task(identity):
+            self.task_operation(operation)
+
+    def _dashboard_details(self, section):
+        self._navigate({"system": 6, "ai": 7}.get(section, 1))
 
     def _activity_page(self) -> QWidget:
         page = QWidget()
@@ -920,6 +1287,7 @@ class MainWindow(QMainWindow):
     def _navigate(self, index: int) -> None:
         self.pages.setCurrentIndex(index)
         self.title_label.setText(self.page_titles[index])
+        self.title_label.setVisible(index != 0 and not self._compact)
         for i, button in enumerate(self.nav):
             button.setChecked(i == index)
         if index == 6:
@@ -928,6 +1296,8 @@ class MainWindow(QMainWindow):
             self.refresh_applications()
         elif index == 7:
             self.refresh_action_health()
+        elif index == 10:
+            self.browser_query.setFocus()
 
     def _workflows_page(self) -> QWidget:
         scroll = QScrollArea()
@@ -1670,6 +2040,8 @@ class MainWindow(QMainWindow):
             (title, lambda i=i: self._navigate(i)) for i, title in enumerate(self.page_titles)
         ]
         actions += [
+            ("Mini assistant", self.toggle_mini),
+            ("Hide to tray", self.hide),
             ("Compact assistant", self.toggle_compact),
             ("New conversation", self.new_conversation),
             ("Pause microphone", lambda: self.voice_controller.stop()),
@@ -1751,7 +2123,15 @@ class MainWindow(QMainWindow):
         elif any(task.get("state") == "awaiting_approval" for task in self._tasks):
             state = "approval"
         self.core.set_state(state)
-        level = getattr(controller.input, "level", None) if capture else None
+        level = (
+            getattr(self._speech, "level", None)
+            if state == "speaking"
+            and self._speech
+            and ((self.isVisible() and not self.isMinimized()) or self.ambient_overlay.isVisible())
+            else getattr(controller.input, "level", None)
+            if capture
+            else None
+        )
         if level is None:
             self.core.clear_level()
         else:
@@ -1767,9 +2147,98 @@ class MainWindow(QMainWindow):
             "CONTEXT · "
             + (project.get("name", "Selected project") if project else "No project selected")
         )
+        self._update_reference_status(state, level, active_jobs)
+        animate_audio = (
+            not self.settings.reduce_motion
+            and state in {"wake", "listening", "speaking"}
+            and ((self.isVisible() and not self.isMinimized()) or self.ambient_overlay.isVisible())
+        )
+        if animate_audio:
+            if not self._visual_audio_timer.isActive():
+                self._visual_audio_timer.start()
+        else:
+            self._visual_audio_timer.stop()
+
+    def _update_reference_status(self, state, level, active_jobs):
+        from .ui_components import STATE_LABELS
+
+        if state != getattr(self, "_last_header_state", None):
+            self._last_header_state = state
+            self.top_bar.set_voice_state(
+                STATE_LABELS[state].replace("_", " ").title(), muted=state == "muted"
+            )
+        self.top_bar.model_label.setText(self.settings.model or "Choose model")
+        self.top_bar.provider_label.setText(self.settings.provider.title())
+        maximized = self.isMaximized()
+        if maximized != getattr(self, "_last_header_maximized", None):
+            self._last_header_maximized = maximized
+            self.top_bar.set_maximized(maximized)
+        for waveform in (self.header_waveform, self.input_waveform):
+            waveform.set_state(state)
+            waveform.set_reduce_motion(self.settings.reduce_motion)
+            waveform.clear_level() if level is None else waveform.set_level(level)
+        now = datetime.now(ZoneInfo(self.settings.timezone))
+        period = (
+            "morning" if 5 <= now.hour < 12 else "afternoon" if 12 <= now.hour < 17 else "evening"
+        )
+        self.greeting_label.setText(f"Good {period}.")
+        availability = {
+            "memory": (True, "Personal Knowledge"),
+            "system": (True, "System Access"),
+            "web": (False, "Real-time Web · unavailable"),
+            "tools": (
+                self.settings.desktop_actions_enabled and not self._stopped,
+                "Tool Execution",
+            ),
+        }
+        capabilities = {
+            "reasoning": (
+                bool(self.settings.model)
+                and (self.settings.provider == "ollama" or self.settings.cloud_allowed),
+                "Reasoning · configured",
+            ),
+            "files": (bool(self.settings.allowed_roots), "File Analysis · scoped"),
+            "search": (self.settings.browser_enabled, "Web Search · browser"),
+            "automation": (any(r.get("enabled") for r in self._routines), "Automation · routines"),
+            "control": (
+                self.settings.desktop_actions_enabled and not self._stopped,
+                "Computer Control",
+            ),
+            "vision": (False, "Vision (Screen) · unavailable"),
+        }
+        for labels, data in (
+            (self.context_status_labels, availability),
+            (self.capability_labels, capabilities),
+        ):
+            for key, (enabled, title) in data.items():
+                labels[key].setText(("◦  " if enabled else "—  ") + title)
+                if labels[key].property("available") != enabled:
+                    labels[key].setProperty("available", enabled)
+                    labels[key].setStyleSheet("color:" + ("#67cbe2" if enabled else "#6f8398"))
+        if hasattr(self, "ambient_overlay"):
+            self.ambient_overlay.set_level(
+                level
+            ) if level is not None else self.ambient_overlay.clear_level()
+        moment = time.monotonic()
+        if moment >= getattr(self, "_next_dashboard_refresh", 0):
+            self._next_dashboard_refresh = moment + 1
+            self.dashboard.update_activity(
+                active_jobs,
+                self._tasks,
+                self._action_runs,
+                self._workflow_runs,
+                stopped=self._stopped,
+            )
+            self.dashboard.update_ai(
+                self.settings.provider,
+                self.settings.model,
+                self.health_result.get("backend", "Not checked"),
+                self._last_latency,
+                self._last_reply.get("usage", {}),
+            )
 
     def refresh_system(self, force=False) -> None:
-        if self._closing or not force and self.pages.currentIndex() != 6:
+        if self._closing or not force and (not self.isVisible() or self.isMinimized()):
             return
         from .awareness import collect_awareness
 
@@ -1790,6 +2259,13 @@ class MainWindow(QMainWindow):
             self.system_details.setPlainText(
                 json.dumps(self._awareness_data, indent=2, ensure_ascii=False)
             )
+            self.dashboard.update_system(system)
+            self.top_bar.cpu_label.setText(f"CPU {cpu:.0f}%" if cpu is not None else "CPU —")
+            self.top_bar.ram_label.setText(f"RAM {ram:.0f}%" if ram is not None else "RAM —")
+            network = system.get("network_bytes_per_second")
+            self.top_bar.network_label.setText(
+                f"NET {network / 1_000_000:.2f} MB/s" if network is not None else "NET —"
+            )
 
         self._run(
             "awareness",
@@ -1809,33 +2285,36 @@ class MainWindow(QMainWindow):
         self.refresh()
 
     def _build_overlay(self):
-        from .ui_components import CoreWidget
+        from .ui_mini import MiniAssistant
 
         self._overlay_dismissed = False
-        self.ambient_overlay = QFrame(
-            self,
-            Qt.WindowType.Tool
-            | Qt.WindowType.FramelessWindowHint
-            | Qt.WindowType.WindowStaysOnTopHint
-            | Qt.WindowType.WindowDoesNotAcceptFocus,
+        self.ambient_overlay = MiniAssistant(
+            self, always_on_top=self.settings.compact_always_on_top
         )
-        self.ambient_overlay.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating)
-        self.ambient_overlay.setObjectName("Panel")
         self.ambient_overlay.setStyleSheet(self.styleSheet())
-        layout = QVBoxLayout(self.ambient_overlay)
-        self.overlay_core = CoreWidget()
-        self.overlay_core.set_reduce_motion(self.settings.reduce_motion)
-        self.overlay_core.setMaximumHeight(110)
-        layout.addWidget(self.overlay_core)
-        self.overlay_label = _label("", "Muted", True)
-        layout.addWidget(self.overlay_label)
-        row = QHBoxLayout()
-        row.addWidget(_button("Open JARVIS", self.show_from_tray))
-        row.addWidget(_button("Dismiss", self.dismiss_overlay))
-        layout.addLayout(row)
-        self.ambient_overlay.resize(320, 210)
+        self.ambient_overlay.set_reduce_motion(self.settings.reduce_motion)
+        self.overlay_core = self.ambient_overlay.core
+        self.overlay_label = self.ambient_overlay.label
+        self.ambient_overlay.expand_requested.connect(self.show_from_tray)
+        self.ambient_overlay.settings_requested.connect(
+            lambda: (self.show_from_tray(), self._navigate(4))
+        )
+        self.ambient_overlay.mute_requested.connect(self._mini_mute)
+        self.ambient_overlay.dismiss_requested.connect(self.dismiss_overlay)
+
+    def toggle_mini(self):
+        self._mini_pinned = not self._mini_pinned
+        self._overlay_dismissed = False
+        self._update_overlay(self.core.state)
+
+    def _mini_mute(self):
+        if self.voice_controller.session.state.value == "MUTED":
+            self.voice_controller.start()
+        else:
+            self.voice_controller.mute()
 
     def dismiss_overlay(self):
+        self._mini_pinned = False
         self._overlay_dismissed = True
         self.ambient_overlay.hide()
 
@@ -1843,18 +2322,19 @@ class MainWindow(QMainWindow):
         if state in {"idle", "wake", "muted", "error"}:
             self._overlay_dismissed = False
         active = state in {"activated", "listening", "thinking", "tool", "speaking", "approval"}
-        if self.isVisible() or not active or self._overlay_dismissed or self._closing:
+        show = self._mini_pinned or not self.isVisible() and active and not self._overlay_dismissed
+        if not show or self._closing:
             self.ambient_overlay.hide()
             return
-        self.overlay_core.set_state(state)
-        self.overlay_label.setText(self.voice_status.text())
+        self.ambient_overlay.set_state(state, self.voice_status.text().removeprefix("Voice: "))
         screen = QApplication.primaryScreen()
-        if screen:
+        if screen and not self._mini_positioned:
             rect = screen.availableGeometry()
             self.ambient_overlay.move(
                 rect.right() - self.ambient_overlay.width() - 24,
                 rect.bottom() - self.ambient_overlay.height() - 24,
             )
+            self._mini_positioned = True
         self.ambient_overlay.show()
 
     def register_project(self):
@@ -2096,17 +2576,8 @@ class MainWindow(QMainWindow):
         self.privacy_label.setText(f"{location}\n{history}\n{self.settings.mode.title()} actions")
 
     def _append_message(self, role: str, content: str) -> None:
-        cursor = self.conversation.textCursor()
-        cursor.movePosition(cursor.MoveOperation.End)
-        title = QTextCharFormat()
-        title.setForeground(QColor("#70e0ed" if role == "JARVIS" else "#b8c8dc"))
-        title.setFontWeight(700)
-        cursor.insertText(f"{role}\n", title)
-        body = QTextCharFormat()
-        body.setForeground(QColor("#dde8f5"))
-        cursor.insertText(str(content) + "\n\n", body)
-        self.conversation.setTextCursor(cursor)
-        self.conversation.ensureCursorVisible()
+        timestamp = datetime.now(ZoneInfo(self.settings.timezone)).strftime("%I:%M %p").lstrip("0")
+        self.conversation.append_message(role, content, timestamp)
         if role == "JARVIS" and hasattr(self, "compact_response"):
             self.compact_response.setText(
                 str(content)[:160] + ("…" if len(str(content)) > 160 else "")
@@ -2118,10 +2589,11 @@ class MainWindow(QMainWindow):
         action: Callable[[], Any],
         success: Callable[[Any], None] | None = None,
         failure: Callable[[str], None] | None = None,
+        streaming: Callable[[str], None] | None = None,
     ) -> _Job | None:
         if name in self._jobs or self._closing:
             return None
-        job = _Job(action, self)
+        job = _Job(action, self, stream=streaming is not None)
         self._jobs[name] = job
 
         def done(result: Any) -> None:
@@ -2133,6 +2605,13 @@ class MainWindow(QMainWindow):
                 (failure or self._status)(error)
 
         job.signals.succeeded.connect(done)
+        if streaming:
+
+            def streamed(text):
+                if not self._closing and self._jobs.get(name) is job:
+                    streaming(text)
+
+            job.signals.delta.connect(streamed)
         job.signals.failed.connect(failed)
         job.signals.finished.connect(lambda: self._finish_job(name))
         self._pool.start(job)
@@ -2207,7 +2686,10 @@ class MainWindow(QMainWindow):
                 f"Elapsed: {self._last_latency:.2f} seconds\nReported token usage: {json.dumps(result.get('usage', {}))}\n"
                 "API cost: unavailable (no pricing estimate configured)"
             )
-            self._append_message("JARVIS", answer)
+            if not self.conversation.finish_stream(answer):
+                self._append_message("JARVIS", answer)
+            else:
+                self.compact_response.setText(answer[:160] + ("…" if len(answer) > 160 else ""))
             self._status(
                 f"Reply from {result.get('provider', self.settings.provider)} · {result.get('model', self.settings.model)}"
             )
@@ -2215,16 +2697,32 @@ class MainWindow(QMainWindow):
             self.refresh()
 
         def failed(error: str) -> None:
+            self.conversation.cancel_stream()
             self._append_message("SYSTEM", error)
             self._status("Request failed · review the message above")
             self.voice_controller.interrupted()
 
-        self._run(
-            "chat",
-            lambda: self.service.chat(text, session_id=session, cancel=cancel),
-            succeeded,
-            failed,
-        )
+        def streamed(delta):
+            if not cancel.is_set() and self._chat_cancel is cancel:
+                self.conversation.append_stream_delta(delta)
+
+        if "on_delta" in inspect.signature(self.service.chat).parameters:
+            self._run(
+                "chat",
+                lambda emit: self.service.chat(
+                    text, session_id=session, cancel=cancel, on_delta=emit
+                ),
+                succeeded,
+                failed,
+                streaming=streamed,
+            )
+        else:
+            self._run(
+                "chat",
+                lambda: self.service.chat(text, session_id=session, cancel=cancel),
+                succeeded,
+                failed,
+            )
         return True
 
     def new_conversation(self) -> None:
@@ -2242,6 +2740,7 @@ class MainWindow(QMainWindow):
         self._status("New conversation · microphone off")
 
     def interrupt(self) -> None:
+        self.conversation.cancel_stream()
         if self._chat_cancel:
             self._chat_cancel.set()
         self._record_cancel.set()
@@ -2724,6 +3223,8 @@ class MainWindow(QMainWindow):
             self._update_privacy_label()
             self.core.set_reduce_motion(self.settings.reduce_motion)
             self.overlay_core.set_reduce_motion(self.settings.reduce_motion)
+            self.ambient_overlay.set_always_on_top(self.settings.compact_always_on_top)
+            self._apply_motion_preferences()
             if not self.settings.desktop_context_enabled:
                 self._awareness_data = {}
                 self.system_details.clear()
@@ -2974,6 +3475,15 @@ class MainWindow(QMainWindow):
             self.sidebar_scroll.hide()
             self.assistant_heading.hide()
             self.new_conversation_button.hide()
+            self.voice_control_row.show()
+            self.voice_status.show()
+            self.top_bar.hide()
+            self.dashboard.hide()
+            self.capability_panel.hide()
+            self.quick_actions.hide()
+            self.input_waveform.hide()
+            self.attach_button.hide()
+            self.presence_panel.setFixedHeight(130)
             self._main_layout.setContentsMargins(16, 12, 16, 10)
             self._main_layout.setSpacing(8)
             self.expand_button.show()
@@ -2995,16 +3505,25 @@ class MainWindow(QMainWindow):
             self.sidebar_scroll.show()
             self.assistant_heading.show()
             self.new_conversation_button.show()
-            self._main_layout.setContentsMargins(28, 24, 28, 18)
-            self._main_layout.setSpacing(16)
+            self.voice_control_row.setVisible(self._show_voice_controls)
+            self.voice_status.setVisible(self._show_voice_controls)
+            self._main_layout.setContentsMargins(8, 8, 8, 2)
+            self._main_layout.setSpacing(6)
+            self.top_bar.show()
+            self.dashboard.setVisible(self.width() >= 1260)
+            self.capability_panel.show()
+            self.quick_actions.show()
+            self.input_waveform.show()
+            self.attach_button.show()
             self.expand_button.hide()
             self.setMinimumSize(760, 560)
             self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, False)
             self.presence_details.show()
             self.conversation.show()
             self.compact_response.hide()
-            self.composer.setFixedHeight(96)
-            self.core.setMaximumHeight(220)
+            self.composer.setFixedHeight(46)
+            self.core.setMaximumHeight(16777215)
+            self.presence_panel.setFixedHeight(342)
             self.speak_check.show()
             self.listen_button.show()
             if self._normal_geometry:
@@ -3020,6 +3539,7 @@ class MainWindow(QMainWindow):
         menu = QMenu(self)
         for title, callback in (
             ("Show JARVIS", self.show_from_tray),
+            ("Hide to tray", self.hide),
             ("Compact assistant", self.toggle_compact),
             ("Pause listening", lambda: self.voice_controller.stop()),
             ("Resume listening", lambda: self.voice_controller.start()),
@@ -3046,6 +3566,7 @@ class MainWindow(QMainWindow):
         hide_action = QAction("Hide to tray", self)
         hide_action.triggered.connect(self.hide)
         self.menuBar().addAction(hide_action)
+        self.menuBar().hide()
 
     def show_from_tray(self) -> None:
         self.showNormal()
@@ -3070,6 +3591,7 @@ class MainWindow(QMainWindow):
         self._closing = True
         self.ambient_overlay.hide()
         self._presence_timer.stop()
+        self._visual_audio_timer.stop()
         self._system_timer.stop()
         self._action_activity_timer.stop()
         # The pooled runnables retain their own signals and never destroy a live QThread.

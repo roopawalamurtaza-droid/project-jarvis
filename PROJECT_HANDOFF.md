@@ -1,5 +1,25 @@
 # Project JARVIS engineering handoff
 
+## Current Phase 4.5 checkpoint — 15 October 2026
+
+Continue **codex/phase4-5-reference-ui**, version **0.4.5**, in the existing
+repository, which is now **public at the user's request**. The Phase 4 branch
+preserves the prior user-confirmed build. PHASE45_RELEASE.md documents the native
+reference UI and docs/PHASE45_VISUAL_SPEC.md records measured composition.
+NEXT_STEPS.md records final test, packaging, live executable and transfer evidence.
+
+The shared service, database, Windows actions, permission controls and microphone
+engine remain. New modules provide original Qt graphics, navigation, message
+cards, dashboard and the parent-owned mini. Ordinary Ollama text chat may stream
+validated answer deltas; interrupted drafts are discarded. Windows playback
+metering reads only this process's scalar peak and does not capture audio.
+The Canva decorative asset is bundled with provenance; no reference screenshot
+or remote service is used as the application background. Other providers remain
+final-only, CPU temperature has no supported source, and screen vision/page
+research remain unavailable. Broader hardware and fresh-machine tests remain open.
+
+## Historical Phase 4 record
+
 The final 0.4.0 source suite passed **823 tests**. The packaged GUI, actual
 Windows app/browser actions, memory/workflows and generated-speech voice checks
 passed; the replacement window was launched on this PC. NEXT_STEPS.md records
@@ -75,9 +95,10 @@ Broader acoustic accuracy and fresh-machine distribution acceptance remain open.
 
 ## Repository and actual state
 
-Private repository: https://github.com/roopawalamurtaza-droid/project-jarvis
+Public repository: https://github.com/roopawalamurtaza-droid/project-jarvis
 
-Working branch: `codex/phase4-actions`. `codex/phase3-ultron` preserves Phase 3,
+Working branch: `codex/phase4-5-reference-ui`. `codex/phase4-actions` preserves Phase 4,
+`codex/phase3-ultron` preserves Phase 3,
 `feature/handsfree-voice` preserves repaired Phase 2, and `main` preserves the Phase 1 checkpoint
 `b3f3c37`. The repository was created private during this handoff. No secrets or
 live user data belong in it. The runtime build commit is recorded in packaged
@@ -336,9 +357,9 @@ cd C:\Jarvis
 ```
 
 Run the clone command only on a new machine/empty destination. The GitHub default
-branch remains Phase 1 main; always choose codex/phase4-actions to continue
-this implementation. Authentication/access for another account must be granted
-by the repository owner; private source is not publicly downloadable.
+branch remains Phase 1 main; always choose codex/phase4-5-reference-ui to continue
+this implementation. The repository is now public and can be cloned for reading;
+contribution access still requires the owner's authorization.
 
 Install `uv` from its official vendor if absent; setup uses `uv sync --frozen`
 voice/dev/package extras. For local AI, install official Ollama, start `ollama

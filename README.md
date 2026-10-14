@@ -1,15 +1,17 @@
 # Project JARVIS
 
-**Current development release: 0.4.0 · Phase 4 Windows actions.** Continue
-branch `codex/phase4-actions` in the private repository. Explicit voice and text
-commands now share a local application library, launch/focus executor, website
-and search actions, and verified action receipts. The existing Phase 3 command
-center, memory, workflows and hands-free voice remain. Read
-[Phase 4 delivery and limits](PHASE4_RELEASE.md) and [NEXT_STEPS.md](NEXT_STEPS.md)
-for actual packaged identity, testing and push records. Diagnostics identifies
-the executable you are running; source edits alone do not update it.
+**Current development release: 0.4.5 · Reference UI.** Continue
+branch `codex/phase4-5-reference-ui` in the now-public repository. The native Qt
+interface recreates the supplied widescreen composition: cyan energy core,
+seven-item navigation, message cards, live intelligence dashboard and movable
+mini assistant. Existing voice, memory, Windows actions and permissions remain.
+Ordinary Ollama conversation streams real answer text; other providers retain
+final responses. Spoken animation reads this process's real playback peak.
+Read [Phase 4.5 delivery and limits](PHASE45_RELEASE.md) and
+[NEXT_STEPS.md](NEXT_STEPS.md) for actual executable identity and verification.
+Diagnostics identifies the executable you are running; source edits require a rebuild.
 
-The 0.4.0 suite passed **823 tests**. On 14 October 2026, the user confirmed the
+The historical 0.4.0 suite passed **823 tests**. On 14 October 2026, the user confirmed the
 live hands-free Notepad, Chrome/Python tutorial search, VS Code follow-up and
 sleep sequence, including visible search results and spoken replies.
 
@@ -57,6 +59,12 @@ and speaker, check **Allow hands-free microphone listening on this PC**, then
 save. Say **Hey Jarvis**, wait for the acknowledgment,
 and speak. Follow-ups work for 20 seconds by default. Pause and Mute close capture.
 See [the voice guide](docs/HANDS_FREE.md) for tuning and verification limits.
+
+In 0.4.5, right-click the input microphone and choose **Show voice controls** to
+display Hold to talk and Speak replies; the same speech preference is in Settings.
+The input microphone mutes or resumes the shared hands-free controller. Choose
+**Mini** at the bottom of the sidebar for the movable assistant. Ctrl+K reaches
+every existing view, including System, Diagnostics, Timeline and Business.
 
 Settings shows version, Git commit, build time, executable path, and live startup
 health. Source edits require rebuilding: the launcher runs `dist\JARVIS\JARVIS.exe`.
@@ -124,8 +132,8 @@ results and the app catalog are not uploaded to cloud chat.
 See [SETUP.md](SETUP.md), [SECURITY.md](SECURITY.md), [TESTING.md](TESTING.md),
 [ARCHITECTURE.md](ARCHITECTURE.md), and [NEXT_STEPS.md](NEXT_STEPS.md).
 Read [PROJECT_HANDOFF.md](PROJECT_HANDOFF.md) first when continuing development.
-Private repository: https://github.com/roopawalamurtaza-droid/project-jarvis,
-branch `codex/phase4-actions`. The handoff records actual transfer/build status.
+Public repository: https://github.com/roopawalamurtaza-droid/project-jarvis,
+branch `codex/phase4-5-reference-ui`. The handoff records actual transfer/build status.
 `uv.lock` pins the complete dependency graph. No real credentials, recordings,
 local databases, downloaded model files, or build output are committed.
 

@@ -28,6 +28,13 @@ data = {
     "build_date_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
     "dirty": bool(git("status", "--porcelain")),
     "source_sha256": sources,
+    "asset_sha256": {
+        str(path.relative_to(root)).replace("\\", "/"): hashlib.sha256(
+            path.read_bytes()
+        ).hexdigest()
+        for path in sorted((root / "src/jarvis/assets").rglob("*"))
+        if path.is_file()
+    },
 }
 target = root / "build/build_info.json"
 target.parent.mkdir(exist_ok=True)

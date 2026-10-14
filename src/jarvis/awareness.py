@@ -17,7 +17,7 @@ import threading
 import time
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 
 GPU_QUERY_TIMEOUT_SECONDS = 2.0
 GPU_OUTPUT_LIMIT = 8192
@@ -50,6 +50,14 @@ class SystemMetricsSnapshot:
     memory_unavailable_reason: str | None = None
     gpu_unavailable_reason: str | None = None
     unavailable_reason: str | None = None
+    disk_percent: float | None = None
+    disk_used_bytes: int | None = None
+    disk_total_bytes: int | None = None
+    network_bytes_per_second: float | None = None
+    cpu_temperature_celsius: float | None = None
+    disk_unavailable_reason: str | None = None
+    network_unavailable_reason: str | None = None
+    temperature_unavailable_reason: str | None = None
 
     def as_dict(self) -> dict:
         return asdict(self)
@@ -123,6 +131,136 @@ def _read_memory() -> tuple[int, int]:
     if not kernel.GlobalMemoryStatusEx(ctypes.byref(status)):
         raise OSError("Windows memory measurement unavailable")
     return int(status.total_physical), int(status.available_physical)
+
+
+def _read_disk() -> tuple[int, int]:
+    """Read the Windows system volume's caller-available total/free space only."""
+    kernel = _kernel32()
+    kernel.GetSystemWindowsDirectoryW.argtypes = [ctypes.c_wchar_p, ctypes.c_uint32]
+    kernel.GetSystemWindowsDirectoryW.restype = ctypes.c_uint32
+    directory = ctypes.create_unicode_buffer(32768)
+    count = kernel.GetSystemWindowsDirectoryW(directory, len(directory))
+    if not 0 < count < len(directory):
+        raise OSError("Windows system volume unavailable")
+    root = PureWindowsPath(directory.value).anchor
+    if not root or root.startswith("\\\\"):
+        raise OSError("Windows system volume is not local")
+    kernel.GetDiskFreeSpaceExW.argtypes = [ctypes.c_wchar_p] + [ctypes.POINTER(ctypes.c_uint64)] * 3
+    kernel.GetDiskFreeSpaceExW.restype = ctypes.c_int
+    available, total, free = ctypes.c_uint64(), ctypes.c_uint64(), ctypes.c_uint64()
+    if not kernel.GetDiskFreeSpaceExW(
+        root, ctypes.byref(available), ctypes.byref(total), ctypes.byref(free)
+    ):
+        raise OSError("Windows disk measurement unavailable")
+    # Both total and available are caller-specific if Windows disk quotas apply.
+    return int(total.value), int(available.value)
+
+
+class _Guid(ctypes.Structure):
+    _fields_ = [
+        ("data1", ctypes.c_uint32),
+        ("data2", ctypes.c_uint16),
+        ("data3", ctypes.c_uint16),
+        ("data4", ctypes.c_uint8 * 8),
+    ]
+
+
+class _MibIfRow2(ctypes.Structure):
+    # Native SDK layout (netioapi.h), including 8-byte alignment. The WCHAR
+    # arrays use uint16 explicitly so structure tests also work off Windows.
+    # https://learn.microsoft.com/windows/win32/api/netioapi/ns-netioapi-mib_if_row2
+    _fields_ = [
+        ("interface_luid", ctypes.c_uint64),
+        ("interface_index", ctypes.c_uint32),
+        ("interface_guid", _Guid),
+        ("alias", ctypes.c_uint16 * 257),
+        ("description", ctypes.c_uint16 * 257),
+        ("physical_address_length", ctypes.c_uint32),
+        ("physical_address", ctypes.c_uint8 * 32),
+        ("permanent_physical_address", ctypes.c_uint8 * 32),
+        ("mtu", ctypes.c_uint32),
+        ("type", ctypes.c_uint32),
+        ("tunnel_type", ctypes.c_uint32),
+        ("media_type", ctypes.c_uint32),
+        ("physical_medium_type", ctypes.c_uint32),
+        ("access_type", ctypes.c_uint32),
+        ("direction_type", ctypes.c_uint32),
+        ("flags", ctypes.c_uint8),
+        ("oper_status", ctypes.c_uint32),
+        ("admin_status", ctypes.c_uint32),
+        ("media_connect_state", ctypes.c_uint32),
+        ("network_guid", _Guid),
+        ("connection_type", ctypes.c_uint32),
+        ("transmit_link_speed", ctypes.c_uint64),
+        ("receive_link_speed", ctypes.c_uint64),
+        ("in_octets", ctypes.c_uint64),
+        ("in_ucast_pkts", ctypes.c_uint64),
+        ("in_nucast_pkts", ctypes.c_uint64),
+        ("in_discards", ctypes.c_uint64),
+        ("in_errors", ctypes.c_uint64),
+        ("in_unknown_protos", ctypes.c_uint64),
+        ("in_ucast_octets", ctypes.c_uint64),
+        ("in_multicast_octets", ctypes.c_uint64),
+        ("in_broadcast_octets", ctypes.c_uint64),
+        ("out_octets", ctypes.c_uint64),
+        ("out_ucast_pkts", ctypes.c_uint64),
+        ("out_nucast_pkts", ctypes.c_uint64),
+        ("out_discards", ctypes.c_uint64),
+        ("out_errors", ctypes.c_uint64),
+        ("out_ucast_octets", ctypes.c_uint64),
+        ("out_multicast_octets", ctypes.c_uint64),
+        ("out_broadcast_octets", ctypes.c_uint64),
+        ("out_qlen", ctypes.c_uint64),
+    ]
+
+
+class _MibIfTable2(ctypes.Structure):
+    _fields_ = [("num_entries", ctypes.c_uint32), ("table", _MibIfRow2 * 1)]
+
+
+def _ip_helper():
+    return ctypes.WinDLL("iphlpapi", use_last_error=True)
+
+
+def _read_network_counters() -> dict[int, tuple[int, int]]:
+    """Read 64-bit RX/TX counters of connected physical interfaces, not traffic.
+
+    No IP addresses, packets, endpoints, names, MAC addresses, or adapter GUIDs
+    are read or returned. Native adapter IDs remain ephemeral inside the worker
+    provider solely to detect reconnection/counter resets between samples.
+    """
+    helper = _ip_helper()
+    table = ctypes.POINTER(_MibIfTable2)()
+    helper.GetIfTable2.argtypes = [ctypes.POINTER(ctypes.POINTER(_MibIfTable2))]
+    helper.GetIfTable2.restype = ctypes.c_uint32
+    helper.FreeMibTable.argtypes = [ctypes.c_void_p]
+    helper.FreeMibTable.restype = None
+    result = helper.GetIfTable2(ctypes.byref(table))
+    if result or not table:
+        raise OSError("Windows network measurement unavailable")
+    try:
+        count = int(table.contents.num_entries)
+        if count > 4096:
+            raise OSError("Windows network interface count exceeded its limit")
+        rows = ctypes.cast(
+            ctypes.addressof(table.contents) + _MibIfTable2.table.offset,
+            ctypes.POINTER(_MibIfRow2),
+        )
+        counters = {}
+        for index in range(count):
+            row = rows[index]
+            # Up, hardware interface; omit filter, loopback and tunnel interfaces
+            # to avoid counting one physical transfer multiple times.
+            if (
+                row.oper_status == 1
+                and row.flags & 1
+                and not row.flags & 2
+                and row.type not in {24, 131}
+            ):
+                counters[int(row.interface_luid)] = (int(row.in_octets), int(row.out_octets))
+        return counters
+    finally:
+        helper.FreeMibTable(table)
 
 
 def _nvidia_executable() -> Path | None:
@@ -239,15 +377,16 @@ def _parse_gpu_output(output: str, sampled_at: str) -> tuple[GpuMetrics, ...]:
 
 
 class SystemMetricsProvider:
-    """Worker-side interval CPU/RAM measurements and cached read-only GPU query.
+    """Worker-side CPU/RAM/disk/network measurements and cached GPU query.
 
-    CPU usage requires two samples; the first intentionally returns None. GPU
+    CPU/network usage requires two samples; the first intentionally returns None. GPU
     results retain their own timestamp when cached. A nonblocking lock rejects
     overlapping collection instead of queuing repeated device queries.
     """
 
     def __init__(self):
         self._previous_cpu: tuple[int, int, int] | None = None
+        self._previous_network: tuple[float, dict[int, tuple[int, int]]] | None = None
         self._gpu_last_query = float("-inf")
         self._gpus: tuple[GpuMetrics, ...] = ()
         self._gpu_reason: str | None = None
@@ -292,7 +431,46 @@ class SystemMetricsProvider:
             except (OSError, AttributeError):
                 memory_total = None
                 memory_reason = "Windows memory measurement unavailable."
+            disk_total = disk_used = disk_percent = None
+            disk_reason = None
+            try:
+                disk_total, disk_available = _read_disk()
+                if not 0 <= disk_available <= disk_total or disk_total <= 0:
+                    raise OSError("Invalid disk measurement")
+                disk_used = disk_total - disk_available
+                disk_percent = round(100 * disk_used / disk_total, 1)
+            except (OSError, AttributeError):
+                disk_total = None
+                disk_reason = "Windows system-volume disk measurement unavailable."
             now = time.monotonic()
+            network = None
+            network_reason = "Network measurement needs a second sample."
+            try:
+                counters = _read_network_counters()
+                previous = self._previous_network
+                if previous is not None:
+                    elapsed = now - previous[0]
+                    old = previous[1]
+                    if (
+                        0 < elapsed <= 60
+                        and counters.keys() == old.keys()
+                        and all(
+                            current[0] >= old[identity][0] and current[1] >= old[identity][1]
+                            for identity, current in counters.items()
+                        )
+                    ):
+                        delta = sum(
+                            current[0] - old[identity][0] + current[1] - old[identity][1]
+                            for identity, current in counters.items()
+                        )
+                        network = round(delta / elapsed, 1)
+                        network_reason = None
+                    else:
+                        network_reason = "Network interval or connected adapters changed."
+                self._previous_network = (now, counters)
+            except (OSError, AttributeError, ValueError):
+                self._previous_network = None
+                network_reason = "Windows physical-network counters unavailable."
             if now - self._gpu_last_query >= GPU_REFRESH_SECONDS:
                 self._gpu_last_query = now
                 try:
@@ -318,6 +496,14 @@ class SystemMetricsProvider:
                 cpu_unavailable_reason=cpu_reason,
                 memory_unavailable_reason=memory_reason,
                 gpu_unavailable_reason=self._gpu_reason,
+                disk_percent=disk_percent,
+                disk_used_bytes=disk_used,
+                disk_total_bytes=disk_total,
+                network_bytes_per_second=network,
+                cpu_temperature_celsius=None,
+                disk_unavailable_reason=disk_reason,
+                network_unavailable_reason=network_reason,
+                temperature_unavailable_reason="CPU temperature has no supported measurement source.",
             )
         finally:
             self._lock.release()
