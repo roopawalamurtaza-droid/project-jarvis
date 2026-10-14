@@ -7,6 +7,10 @@ repository, which is now **public at the user's request**. The Phase 4 branch
 preserves the prior user-confirmed build. PHASE45_RELEASE.md documents the native
 reference UI and docs/PHASE45_VISUAL_SPEC.md records measured composition.
 NEXT_STEPS.md records final test, packaging, live executable and transfer evidence.
+The final full suite passed **949 tests**, and the clean runtime build
+**af909466f48c** passed frozen UI, action, memory/workflow and generated-voice
+checks. It was launched normally with preserved settings/memory/credentials.
+The current 0.4.5 human microphone/mini check is requested separately and pending.
 
 The shared service, database, Windows actions, permission controls and microphone
 engine remain. New modules provide original Qt graphics, navigation, message

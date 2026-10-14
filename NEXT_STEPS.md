@@ -6,8 +6,9 @@ Continue **codex/phase4-5-reference-ui** in the existing **public** repository
 https://github.com/roopawalamurtaza-droid/project-jarvis. The previous Phase 4
 branch and build are preserved. Read PHASE45_RELEASE.md and the visual spec.
 
-- Baseline **823 passed in 151.65s**; full source suite **949 passed in 114.92s**.
-  Ruff and all **86** formatting checks passed. Final small motion/tray changes
+- Baseline **823 passed in 151.65s**; final source suite **949 passed in 128.50s**
+  after the native compact/shutdown repair (earlier checkpoint: 114.92s).
+  Ruff and all **87** formatting checks passed. Small motion/tray changes
   were covered by a subsequent **12-test** UI/identity pass; counts overlap.
 - Actual Windows renders were refined across first/second/final captures.
   The last native source capture displayed a real local qwen3:8b streamed reply,
@@ -24,8 +25,41 @@ branch and build are preserved. Read PHASE45_RELEASE.md and the visual spec.
 - Cloud replies remain final-only; CPU temperature, screen vision, page research
   and arbitrary browser/shell control remain unavailable. Broader acoustic,
   physical-display, long-soak and fresh-machine checks remain separate.
-- Rebuild/deployment and new human acceptance are pending this source checkpoint;
-  update this section with the actual frozen identity and verification results.
+- Frozen **0.4.5** is built from clean runtime commit
+  **af909466f48cdf107f6581b6ed5fed5527de0e63**, branch
+  `codex/phase4-5-reference-ui`, UTC build **2026-10-14T22:20:34+00:00**.
+  All **36** source hashes and both bundled asset hashes match. The runtime source
+  was successfully pushed and the remote identifier checked. Later delivery-only
+  documentation/capture commits can differ without changing those runtime bytes.
+- Executable **C:\Jarvis\dist\JARVIS\JARVIS.exe**: **14,825,726 bytes**,
+  timestamp UTC **2026-10-14T22:21:35.378572+00:00**, SHA256
+  **5778c07e98e73dc41673acaef233a226e9e92d3f29ea7547c6961dba7d7ed35f**.
+  Smoke, reference UI with real local streaming/all 11 views, preserved
+  memory/workflows, actual Windows app/browser actions and generated-speech
+  voice/app/search/follow-up/sleep/mute/shutdown checks all exited **0**.
+  Final native UI sample maximum gap **0.032s**; full synthetic voice sample
+  **0.922s**. No universal latency or human acoustic accuracy is inferred.
+- Compact/restore testing found three parentless helper labels leaving an extra
+  native window. Qt parenting fixed natural shutdown, verified in **0.469s**;
+  final frozen memory/workflow diagnostic now closes naturally. The entire old
+  **0.4.0** folder is retained at `transfer/phase4-build-0.4.0`; the intermediate
+  pre-repair 0.4.5 package is retained separately. Do not launch it for acceptance.
+- Actual normal launch through **Start JARVIS.cmd** verified PID **59956**, title
+  **JARVIS · Command Center**, responsive, nonzero window handle, exact final
+  executable path and `.local` argument at UTC **2026-10-14T22:25:13.6410537Z**.
+  Existing settings hash, memory count and protected credential-file hash/presence
+  still match after launch. No alternate shortcut was introduced.
+- `transfer/JARVIS-Windows-0.4.5.zip`: **154,701,520 bytes**, **1,116 files**
+  individually hash-verified, complete folder plus BUILD_MANIFEST/INSTALL.
+  SHA256 **45fcdbd20c831fcc21274b549a0ad3889a4a5e78524c9b572266aa7a90c0e514**.
+  Local export, not a published GitHub Release or signed installer. Preserve `.local`.
+- Source/history handoff is `transfer/PROJECT_JARVIS_HANDOFF.zip`; its MANIFEST
+  and adjacent SHA256 identify the final delivery documentation commit. Restore
+  its all-ref bundle with `codex/phase4-5-reference-ui`. No user data/keys/models
+  are included. Do not zip the entire transfer folder, which contains local backups.
+- Human **0.4.5** wake/Notepad → combined Chrome/search → VS Code follow-up → sleep
+  and shared Mini check are requested and pending. Keep this distinct from the
+  prior user-confirmed 0.4.0 sequence and generated PCM diagnostics.
 
 ## Historical Phase 4 delivery
 

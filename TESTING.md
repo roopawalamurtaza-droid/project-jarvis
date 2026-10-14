@@ -3,7 +3,9 @@
 ## Phase 4.5 reference UI — 0.4.5
 
 Baseline: **823 passed in 151.65s**. Final full source suite: **949 passed in
-114.92s**. Ruff and all **86** formatting checks passed. A later **12-test**
+114.92s** at the first passing checkpoint. After the compact/shutdown ownership
+repair, the final full suite passed **949 tests in 128.50s**; Ruff and all **87**
+formatting checks passed. A later **12-test**
 UI/identity check passed after the final small motion/tray refinements; these
 overlap and are not added to the full count. The earlier full attempt had
 943 passes and one stale 0.4.0 version assertion, corrected to actual identity.
@@ -17,6 +19,16 @@ metering produced 172 exact-own-process samples, 143 positive, peak 0.53837,
 and unavailable after stop. Disk/network readings are native measured values;
 CPU temperature remains unavailable. See PHASE45_RELEASE.md and NEXT_STEPS.md
 for current packaging/deployment and separate human acceptance evidence.
+
+The final frozen build `af909466f48c` passed smoke, native reference UI with real
+local streaming/all 11 destinations, preserved memory/workflows, actual Windows
+app/browser actions and generated PCM voice/action/shutdown diagnostics, each
+with exit code 0. Current UI diagnostic maximum timer gap was 0.032s; the full
+synthetic voice run's maximum gap was 0.922s, so these short samples are not a
+universal latency guarantee. A native compact→restore→close regression exited
+naturally in 0.469s after the repaired parentless helper-label issue.
+The normal executable was launched and user data preservation verified.
+The new 0.4.5 human microphone/mini check is requested separately and pending.
 
 ## Historical Phase 4 verification — 2026-10-14
 

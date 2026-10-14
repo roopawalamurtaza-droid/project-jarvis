@@ -103,9 +103,10 @@ Canva connection are required.
 - Native worker CPU/RAM/system-volume/network measurement succeeded on the
   current Windows machine. CPU temperature was explicitly unavailable.
 
-**Full-suite result:** **949 passed in 114.92s**. Ruff and all **86** formatting
-checks passed. A later 12-test UI/identity check covered the final motion/tray
-refinements. The first complete attempt passed 943 tests and found a historical
+**Final full-suite result:** **949 passed in 128.50s** after the compact/shutdown
+ownership repair; Ruff and all **87** formatting checks passed. An earlier
+passing checkpoint ran 949 tests in 114.92s. A 12-test UI/identity check covered
+the motion/tray refinements. The first complete attempt passed 943 tests and found a historical
 hardcoded version assertion, which was corrected to check the actual release.
 Native application captures also passed at Qt scaling factors 1.25 and 1.5;
 this does not change or certify Windows display settings on other monitors.
@@ -117,11 +118,18 @@ with reduced motion (3.646% and 0.260% of one logical CPU). Working sets were
 Microphone, speech, cloud and foreground context were disabled. This is a short
 idle sample, not a GPU, leak, voice-load or long-soak benchmark.
 
-**Packaging/deployment and human 0.4.5 voice acceptance:** pending at this record's
-creation. Source captures and older 0.4.0 human acceptance do not establish that
-the new executable has been rebuilt, installed or accepted. Final delivery must
-record the rebuilt version, source hashes, executable identity, launch path and
-new-build checks. No push or archive refresh is claimed by this document alone.
+**Final packaging and deployment passed:** runtime commit `af909466f48c`,
+version 0.4.5, clean build, 36 matching source hashes and both asset hashes.
+The frozen smoke, reference UI/local streaming, memory/workflows, actual Windows
+actions and generated-speech voice/action/shutdown checks each exited 0.
+The compact regression exposed three parentless compatibility labels that could
+leave an extra native window and prevent shutdown. Parenting them to the page
+repaired natural compact→restore→close; no forced-quit workaround was added.
+The final normal window was launched from `C:\Jarvis\dist\JARVIS\JARVIS.exe`
+through `Start JARVIS.cmd`; settings, memory count and credential-file hashes
+were preserved. Actual identity, successful pushes and verified transfer archives
+are in NEXT_STEPS.md. The current 0.4.5 human microphone/mini check is requested
+and pending; historical acceptance and synthetic speech are separate evidence.
 
 ## Reproduce installation, launch and checks
 
@@ -191,9 +199,9 @@ files. A clicked link is validated and dispatched through the same HTTPS tool an
 approvals as other commands. Approval cards do not bypass exact-target grants,
 one-use authorization, cancellation or emergency stop.
 
-Remaining verification includes the rebuilt executable, actual hands-free
-wake/app/search/follow-up/sleep sequence, natural spoken punctuation, minimize/
-tray/mini shared capture, compact restoration, physical 125%/150% scaling and
+Remaining verification includes the human hands-free wake/app/search/follow-up/
+sleep sequence, natural spoken punctuation, tray/mini acoustic behavior, diverse
+physical 125%/150% display scaling and
 longer idle/voice resource checks. These must be reported as actual checks when
 completed, with wider acoustic, fresh-PC, screen-reader and signed-distribution
 acceptance kept separate. Preserve settings, memory and protected credentials
