@@ -13,7 +13,7 @@ notes need live literal-text preview and one-use approval. Broader vision/file/
 coding/forms/downloads/recurring capabilities remain unimplemented. Never infer
 new automation acceptance from the historical 0.4.5 voice check below.
 
-## Current Phase 4.5 checkpoint — 15 October 2026
+## Historical Phase 4.5 checkpoint — 15 October 2026
 
 Continue **codex/phase4-5-reference-ui**, version **0.4.5**, in the existing
 repository, which is now **public at the user's request**. The Phase 4 branch

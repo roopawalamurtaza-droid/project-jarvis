@@ -99,6 +99,15 @@ The Google search gate is unverified whenever CAPTCHA blocks it. NEXT_STEPS.md
 records current source/frozen/human evidence; never infer new voice acceptance
 from the earlier 0.4.5 microphone check.
 
+Actual generated speech of the full note command reached the parser, but plain
+`jarvis-test.txt` became `JarvisTest.txt`; saying "dot txt" produced `.text` in
+another fixture. Saying **jarvis hyphen test dot T X T** produced
+`Jarvis-test.txt` with the existing offline recognizer. Explicit spoken hyphen/
+dash/underscore and dot/period extension words are also supported by the parser.
+Missing punctuation is never guessed and literal typed paths are unchanged.
+Check the live preview's filename and text/case before approval; ASR is not
+lossless dictation. `.text` is refused rather than silently renamed.
+
 General Windows controls/apps, vision/screenshots, browser uploads/downloads,
 consequential forms, research comparisons, file organization/PDF/spreadsheet
 reports, repository editing/development commands and durable schedules remain
@@ -138,7 +147,8 @@ microphone and calls no cloud model. For human acceptance, enable both computer
 permissions in Settings, retain wake/Speak replies and add the actual Desktop to
 permitted roots if needed. Speak the note objective, review its exact path/text
 in Mission Control and approve. Check the saved file. Request the official Python
-search, use the reviewed human mode for any challenge, end it and repeat the
+search, use the reviewed human mode for any challenge (refresh Chrome's challenge
+page if its widget previously failed), end it and repeat the
 search; check the actual final page/follow-up/pause/Stop. Preserve `.local` and
 the old complete build during replacement. Keep the whole new folder together.
 Unsigned/fresh-PC, broad acoustics, localized/legacy Notepad and physical

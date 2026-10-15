@@ -2,6 +2,7 @@
 
 import json
 import threading
+from pathlib import Path
 
 import pytest
 
@@ -120,6 +121,49 @@ def test_unquoted_transcription_uses_same_note_policy(system, monkeypatch):
         == "Testing JARVIS automation"
     )
     assert notes.calls == []
+
+
+@pytest.mark.parametrize(
+    "filename",
+    [
+        "jarvis hyphen test dot txt",
+        "jarvis dash test dot T X T",
+        "jarvis underscore test period text",
+    ],
+)
+def test_explicit_spoken_filename_punctuation_is_reviewed_exactly(system, monkeypatch, filename):
+    service, notes, _, _, root = system
+    monkeypatch.setattr(computer_commands, "desktop_directory", lambda: root)
+    reply = service.chat(
+        f"Open Notepad, write a short note saying Testing JARVIS automation and save it on my Desktop as {filename}.",
+        "voice",
+    )
+    preview = service.approval_preview(reply["task_id"])
+    expected = "jarvis_test.txt" if "underscore" in filename else "jarvis-test.txt"
+    assert Path(preview["arguments"]["path"]).name == expected
+    assert not notes.calls
+
+
+def test_missing_separator_is_never_invented_in_a_recognized_filename(system, monkeypatch):
+    service, _, _, _, root = system
+    monkeypatch.setattr(computer_commands, "desktop_directory", lambda: root)
+    reply = service.chat(
+        "Open Notepad, write a short note saying Testing JARVIS automation and save it on my Desktop as JarvisTest.txt.",
+        "voice",
+    )
+    assert (
+        Path(service.approval_preview(reply["task_id"])["arguments"]["path"]).name
+        == "JarvisTest.txt"
+    )
+
+
+def test_quoted_literal_filename_is_not_silently_normalized(system):
+    service, notes, _, _, root = system
+    reply = service.chat(
+        f"Open Notepad, write 'Testing JARVIS automation', and save it to '{root / 'literal.text'}'.",
+        "s",
+    )
+    assert "No action ran" in reply["text"] and not notes.calls
 
 
 @pytest.mark.parametrize("flag", ["computer_use_enabled", "desktop_actions_enabled"])

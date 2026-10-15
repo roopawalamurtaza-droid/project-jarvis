@@ -43,6 +43,14 @@ def _step(tool, arguments, label):
     return ActionPlan([{"tool": tool, "arguments": arguments, "label": label}])
 
 
+def spoken_filename(value):
+    """Honor explicitly spoken punctuation; never invent a missing separator."""
+    value = re.sub(r"\s+(?:hyphen|dash)\s+", "-", value, flags=re.I)
+    value = re.sub(r"\s+underscore\s+", "_", value, flags=re.I)
+    value = re.sub(r"\s+(?:dot|period)\s+(?:t\s*x\s*t|text)\b", ".txt", value, flags=re.I)
+    return value
+
+
 def parse_computer_actions(message, settings, *, context=None):
     text = command_text(message).strip()
     context = context or {}
@@ -102,6 +110,8 @@ def parse_computer_actions(message, settings, *, context=None):
         )
         if spoken:
             destination = (spoken[2] or spoken[3]).strip().rstrip(".!? ").strip("\"'“”‘’")
+            if spoken[2]:
+                destination = spoken_filename(destination)
             prefix = "on my Desktop as" if spoken[2] else "to"
             # Reuse exactly the same literal/destination policy as typed input.
             literal = spoken[1].strip().rstrip(", ")
