@@ -13,7 +13,8 @@ import uuid
 from contextlib import contextmanager
 from copy import deepcopy
 
-from .storage import now
+from .storage import now, without_page_content
+from .tools import COMPUTER_SCHEMAS
 
 MAX_ACTIONS = 6
 ACTIVE = {"running", "awaiting_approval"}
@@ -24,7 +25,18 @@ ALLOWED_ACTIONS = {
     "search_web",
     "list_applications",
     "get_system_status",
+    *COMPUTER_SCHEMAS,
 }
+
+
+class _PlanCancel:
+    def __init__(self, caller, local):
+        self.caller, self.local = caller, local
+
+    def is_set(self):
+        return (self.local is not None and self.local.is_set()) or (
+            self.caller is not None and self.caller.is_set()
+        )
 
 
 class ActionDispatcher:
@@ -34,6 +46,7 @@ class ActionDispatcher:
         self._contexts = {}
         self._signals = {}
         self._cancel_events = {}
+        self._live_runs = {}
         with self._connect() as db:
             db.execute(
                 "CREATE TABLE IF NOT EXISTS action_runs (id TEXT PRIMARY KEY, data TEXT NOT NULL, updated_at TEXT NOT NULL)"
@@ -57,10 +70,16 @@ class ActionDispatcher:
 
     def _save(self, run):
         run["updated_at"] = now()
+        record = deepcopy(run)
+        for step in record["steps"]:
+            if step["tool"] == "desktop_write_note":
+                step["arguments"].pop("text", None)
+            if step["tool"].startswith("browser_"):
+                step["result"] = without_page_content(step.get("result"))
         with self._connect() as db:
             db.execute(
                 "INSERT INTO action_runs VALUES(?,?,?) ON CONFLICT(id) DO UPDATE SET data=excluded.data,updated_at=excluded.updated_at",
-                (run["id"], json.dumps(run), run["updated_at"]),
+                (run["id"], json.dumps(record), run["updated_at"]),
             )
             db.execute(
                 "DELETE FROM action_runs WHERE id NOT IN (SELECT id FROM action_runs ORDER BY CASE WHEN json_extract(data,'$.state') IN ('running','awaiting_approval') THEN 0 ELSE 1 END, updated_at DESC LIMIT 256)"
@@ -141,6 +160,7 @@ class ActionDispatcher:
             }
             self._signals[run["id"]] = cancel
             self._cancel_events[run["id"]] = threading.Event()
+            self._live_runs[run["id"]] = run
             self._save(run)
             return self._continue(run)
 
@@ -169,9 +189,10 @@ class ActionDispatcher:
                 else:
                     step["state"] = "running"
                     self._save(run)
-                    task = self.engine.submit(
-                        step["tool"], step["arguments"], require_approval=run["require_approval"]
-                    )
+                    options = {"require_approval": run["require_approval"]}
+                    if step["tool"] in COMPUTER_SCHEMAS:
+                        options["cancel"] = _PlanCancel(signal, cancelled)
+                    task = self.engine.submit(step["tool"], step["arguments"], **options)
                     step["task_id"] = task["id"]
                 step.update(
                     state=task["state"],
@@ -209,6 +230,7 @@ class ActionDispatcher:
         )
         self._signals.pop(run["id"], None)
         self._cancel_events.pop(run["id"], None)
+        self._live_runs.pop(run["id"], None)
         self._save(run)
         return deepcopy(run)
 
@@ -226,6 +248,9 @@ class ActionDispatcher:
                 context["browser"] = app
         elif step["tool"] in {"open_website", "search_web"}:
             context["browser"] = step["arguments"].get("browser", self.settings.default_browser)
+        elif step["tool"].startswith("browser_"):
+            context["computer_browser"] = True
+            context["browser"] = step["arguments"].get("browser", context.get("browser", "chrome"))
         while len(self._contexts) > 128:
             del self._contexts[next(iter(self._contexts))]
 
@@ -236,6 +261,7 @@ class ActionDispatcher:
                     run["state"] == "awaiting_approval"
                     and run["steps"][run["step_index"]]["task_id"] == task_id
                 ):
+                    run = self._live_runs.get(run["id"], run)
                     run["state"] = "running"
                     return self._continue(run)
         return None
@@ -249,6 +275,7 @@ class ActionDispatcher:
         run["state"] = "cancelled"
         self._signals.pop(run["id"], None)
         self._cancel_events.pop(run["id"], None)
+        self._live_runs.pop(run["id"], None)
         self._save(run)
 
     def cancel(self, run_id):
@@ -322,5 +349,30 @@ def action_summary(run):
                 cpu, ram = system.get("cpu_percent"), system.get("memory_percent")
                 phrases.append(
                     f"CPU: {cpu if cpu is not None else 'awaiting a second sample'} percent. RAM: {ram if ram is not None else 'unavailable'} percent."
+                )
+            elif tool == "desktop_write_note":
+                phrases.append(
+                    f"Saved the Notepad note to {result.get('path', args['path'])} and verified its contents."
+                )
+            elif tool in {"browser_search_open", "browser_navigate", "browser_new_tab"}:
+                page = result.get("page") or result
+                phrases.append(
+                    f"Opened and verified {page.get('title') or page.get('url') or 'the requested page'} in the JARVIS browser."
+                )
+            elif tool == "browser_read":
+                page = result.get("page") or result
+                phrases.append(
+                    str(
+                        page.get(
+                            "content",
+                            "Page observed; review Computer Use for its title and targets.",
+                        )
+                    )[:1200]
+                )
+            elif tool.startswith("browser_"):
+                phrases.append(
+                    str(result.get("detail") or "The browser action was observed and verified.")[
+                        :500
+                    ]
                 )
     return " ".join(phrases) or "No action completed."

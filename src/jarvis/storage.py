@@ -191,8 +191,17 @@ class Store:
     def put_task(self, task):
         record = dict(task)
         # A file read is permission to view, not to persist the file in task history.
-        if record.get("tool") == "read_file" and isinstance(record.get("result"), dict):
+        if record.get("tool") in {"read_file", "browser_read"} and isinstance(
+            record.get("result"), dict
+        ):
             record["result"] = {k: v for k, v in record["result"].items() if k != "content"}
+        if record.get("tool") == "desktop_write_note":
+            # Pending literal text lives only in TaskEngine's one-use preview.
+            record["arguments"] = {
+                k: v for k, v in record.get("arguments", {}).items() if k != "text"
+            }
+        if record.get("tool", "").startswith("browser_"):
+            record["result"] = without_page_content(record.get("result"))
         with self._lock, self._connect() as db:
             db.execute(
                 "INSERT INTO tasks VALUES(?,?,?) ON CONFLICT(id) DO UPDATE SET data=excluded.data,updated_at=excluded.updated_at",
@@ -270,3 +279,12 @@ class Store:
     def close(self):
         # Connections are scoped to each call; nothing long-lived to release.
         pass
+
+
+def without_page_content(value):
+    """Observation is permission to view, not to silently retain page bodies."""
+    if isinstance(value, dict):
+        return {key: without_page_content(item) for key, item in value.items() if key != "content"}
+    if isinstance(value, list):
+        return [without_page_content(item) for item in value]
+    return value

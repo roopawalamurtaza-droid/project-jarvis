@@ -34,5 +34,7 @@
   "default_search_engine": "google",
   "browser_new_window": false,
   "preferred_websites": {},
-  "model_action_planning": false
+  "model_action_planning": false,
+  "computer_use_enabled": false,
+  "browser_automation_enabled": false
 }

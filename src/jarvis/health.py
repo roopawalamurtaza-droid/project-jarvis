@@ -50,7 +50,7 @@ def build_identity() -> dict:
 def startup_health(settings) -> dict:
     packages = {
         name: importlib.util.find_spec(name) is not None
-        for name in ("faster_whisper", "webrtcvad", "sounddevice")
+        for name in ("faster_whisper", "webrtcvad", "sounddevice", "playwright", "pywinauto")
     }
     models = settings.data_dir / "speech-models"
     snapshots = models / ("models--Systran--faster-whisper-" + settings.speech_model) / "snapshots"
@@ -98,4 +98,10 @@ def startup_health(settings) -> dict:
         "wake_permission": settings.wake_enabled,
         "microphone": microphone,
         "backend": backend,
+        "computer_control": "Opted in; individual new notes require approval"
+        if settings.computer_use_enabled
+        else "Disabled; explicit opt-in required",
+        "browser_automation": "Opted in; isolated Chrome/Edge session"
+        if settings.browser_automation_enabled
+        else "Disabled; explicit opt-in required",
     }

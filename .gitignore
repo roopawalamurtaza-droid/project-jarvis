@@ -11,6 +11,7 @@ build/
 dist/
 transfer/
 *.spec
+!JARVIS.spec
 artifacts/*.log
 artifacts/*.json
 

@@ -1,5 +1,18 @@
 # Project JARVIS engineering handoff
 
+## Current Phase 5 development: 0.5.0
+
+Continue `codex/phase5-computer-use` in the existing public repository. Read
+PHASE5_RELEASE.md first for current architecture, tools, permissions, exact
+commands, dependencies and unfinished gates. Native Notepad note entry/save/byte
+verification and isolated browser page/scroll/tab/history observations are
+implemented; this is the first gate increment, not full OMNI-AUTONOMY completion.
+NEXT_STEPS.md/TESTING.md record actual source/package/live evidence. Preserve
+the existing interface/voice/memory. New computer/browser opt-ins default off;
+notes need live literal-text preview and one-use approval. Broader vision/file/
+coding/forms/downloads/recurring capabilities remain unimplemented. Never infer
+new automation acceptance from the historical 0.4.5 voice check below.
+
 ## Current Phase 4.5 checkpoint — 15 October 2026
 
 Continue **codex/phase4-5-reference-ui**, version **0.4.5**, in the existing

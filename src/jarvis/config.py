@@ -71,6 +71,8 @@ class Settings(BaseModel):
     browser_new_window: bool = False
     preferred_websites: dict[str, str] = Field(default_factory=dict)
     model_action_planning: bool = False
+    computer_use_enabled: bool = False
+    browser_automation_enabled: bool = False
 
     @field_validator("preferred_websites")
     @classmethod

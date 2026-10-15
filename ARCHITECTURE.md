@@ -1,5 +1,11 @@
 # Architecture
 
+Phase 5 adds `computer_commands.py`, native UIA `computer_windows.py` and owned
+Playwright `computer_browser.py` behind the same typed registry/TaskEngine and
+serial ActionDispatcher. Computer Use is a worker-driven view; no extra microphone
+or per-tool model. See PHASE5_RELEASE.md for current tools, observation evidence,
+temporary human POST grant, privacy boundaries and unfinished milestones.
+
 The native desktop and optional HTTP API share `JarvisService`. The desktop calls
 blocking service operations through Qt workers, keeping the GUI responsive.
 There is no desktop network listener in the normal application.

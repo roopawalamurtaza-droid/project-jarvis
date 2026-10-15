@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "project-jarvis"
-version = "0.4.5"
+version = "0.5.0"
 description = "A local-first, permission-controlled Windows AI assistant"
 requires-python = ">=3.12,<3.14"
 dependencies = [
@@ -16,6 +16,9 @@ dependencies = [
   "sounddevice>=0.5,<0.6",
   "numpy>=2,<3",
   "tzdata>=2025.2",
+  "playwright>=1.64,<2",
+  "pywinauto==0.6.9; sys_platform == 'win32'",
+  "comtypes>=1.4.17,<2; sys_platform == 'win32'",
 ]
 
 [project.optional-dependencies]

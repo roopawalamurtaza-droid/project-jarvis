@@ -1,6 +1,25 @@
-# Verification record — 2026-10-15
+# Verification record — 2026-10-16
 
-## Phase 4.5 reference UI — 0.4.5
+## Phase 5 first gates — 0.5.0
+
+Final source suite: **1,085 passed in 178.85s**; focused automation/UI suite
+**136 passed** (overlapping). Frozen results are recorded in NEXT_STEPS.md after
+execution. New fake-adapter tests
+cover one-use live note approval, no persisted note/page body, consent revocation,
+path/overwrite refusal, shared voice/text grammar, safe cancellation/pause,
+observed browser targets/private DNS/redirect/method guards, challenge handling,
+temporary manual grant/revocation and explicit Qt approval/status controls.
+
+Actual shared-service Windows Notepad entry/Save As/content check passed, as did
+separate Unicode/symbol and native Chrome page/scroll/tab/history/recreation
+checks. These are actual executor checks, not fake-adapter tests. Google returned
+CAPTCHA: actual search-and-open remains blocked/unverified until the human gate.
+The disappearing initial browser was intentionally stopped; no spontaneous crash
+was established. New microphone, packaged human challenge, fresh-PC, localized/
+legacy Notepad, physical locked/elevated desktop and broader autonomy are not
+established by these tests. See PHASE5_RELEASE.md for commands and exact limits.
+
+## Historical Phase 4.5 reference UI — 0.4.5
 
 Baseline: **823 passed in 151.65s**. Final full source suite: **949 passed in
 114.92s** at the first passing checkpoint. After the compact/shutdown ownership

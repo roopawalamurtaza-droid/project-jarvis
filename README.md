@@ -1,6 +1,13 @@
 # Project JARVIS
 
-**Current development release: 0.4.5 · Reference UI.** Continue
+**Current development release: 0.5.0 · First computer-use gates.** Continue
+`codex/phase5-computer-use`. JARVIS can enter and save a new approved Notepad note
+through native accessibility controls and verify its contents, and operate a
+separate Chrome/Edge session with actual page observations. New permissions
+default off; notes require exact approval. Read [Phase 5 behavior and evidence](PHASE5_RELEASE.md)
+and [NEXT_STEPS.md](NEXT_STEPS.md). The entire autonomy directive remains incomplete.
+
+**Previous user-verified release: 0.4.5 · Reference UI.** Continue
 branch `codex/phase4-5-reference-ui` in the now-public repository. The native Qt
 interface recreates the supplied widescreen composition: cyan energy core,
 seven-item navigation, message cards, live intelligence dashboard and movable

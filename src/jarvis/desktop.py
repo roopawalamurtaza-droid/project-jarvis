@@ -65,6 +65,13 @@ from PySide6.QtWidgets import (
 from .config import Settings, save_settings
 from .secrets import SecretStore
 
+BROWSER_HUMAN_GRANT = (
+    "The owned JARVIS browser may send public HTTPS POST requests for five minutes, "
+    "including requests from page scripts. Use it only to solve the visible login/CAPTCHA. "
+    "Automated actions remain idle until your next request. Stop revokes this permission. "
+    "Personal browser profile is not attached."
+)
+
 STYLE = """
 QWidget { background: #0c111b; color: #dde8f5; font-family: 'Segoe UI'; font-size: 13px; }
 QMainWindow { background: #0c111b; }
@@ -247,6 +254,9 @@ class MainWindow(QMainWindow):
         self._pending_application_id: str | None = None
         self._action_runs: list[dict[str, Any]] = []
         self._action_health: dict[str, Any] = {}
+        self._computer_status: dict[str, Any] = {}
+        self._computer_status_generation = 0
+        self._computer_paused = False
         self._mini_pinned = False
         self._mini_positioned = False
         self._show_voice_controls = False
@@ -307,6 +317,10 @@ class MainWindow(QMainWindow):
         self._action_activity_timer.setInterval(1000)
         self._action_activity_timer.timeout.connect(self._refresh_active_actions)
         self._action_activity_timer.start()
+        self._computer_status_timer = QTimer(self)
+        self._computer_status_timer.setInterval(2000)
+        self._computer_status_timer.timeout.connect(self.refresh_computer_status)
+        self._computer_status_timer.start()
         shortcut = QShortcut(QKeySequence("Ctrl+K"), self)
         shortcut.activated.connect(self.command_palette)
         self._palette_shortcut = shortcut
@@ -380,6 +394,7 @@ class MainWindow(QMainWindow):
             "Business",
             "Application Library",
             "Browser",
+            "Computer Use",
         )
         # Stable controller page indexes preserve all prior views and tests.
         self.nav = [QPushButton(title) for title in self.page_titles]
@@ -399,7 +414,7 @@ class MainWindow(QMainWindow):
             button.clicked.connect(lambda checked=False, i=index: self._navigate(i))
             self.nav[index] = button
             side.addWidget(button)
-        for index in (3, 6, 7, 8):
+        for index in (3, 6, 7, 8, 11):
             self.nav[index].setParent(self.sidebar)
             self.nav[index].hide()
         side.addStretch(1)
@@ -445,6 +460,7 @@ class MainWindow(QMainWindow):
         self.pages.addWidget(self._business_page())
         self.pages.addWidget(self._applications_page())
         self.pages.addWidget(self._browser_page())
+        self.pages.addWidget(self._computer_use_page())
         main.addWidget(self.title_label)
         main.addWidget(self.pages, 1)
         self.status_label = _label("Ready · microphone off", "FooterStatus", True)
@@ -704,8 +720,9 @@ class MainWindow(QMainWindow):
         layout.addWidget(_label("BROWSER", "Title"))
         layout.addWidget(
             _label(
-                "Search results open in your configured browser. JARVIS does not yet read pages, "
-                "summarize websites or control authenticated sessions.",
+                "These shortcuts open your configured browser. With browser automation enabled, "
+                "ask JARVIS to navigate and inspect public pages in its separate browser session. "
+                "Your personal browser login is not reused.",
                 "Muted",
                 True,
             )
@@ -718,6 +735,7 @@ class MainWindow(QMainWindow):
         row.addWidget(_button("Search web", self._browser_search, kind="Primary"))
         row.addWidget(_button("Open browser", self._quick_browser))
         row.addWidget(_button("Review execution", lambda: self._navigate(1)))
+        row.addWidget(_button("Computer Use", lambda: self._navigate(11)))
         row.addStretch()
         layout.addLayout(row)
         layout.addWidget(_label("Website shortcuts · existing permissions apply", "SectionEyebrow"))
@@ -890,7 +908,8 @@ class MainWindow(QMainWindow):
         receipt_layout = QVBoxLayout(receipts)
         receipt_layout.addWidget(
             _label(
-                "Action plans show exact targets and Windows receipts. Browser content is not inspected.",
+                "Action plans show exact targets, execution receipts and observed results. "
+                "A browser launch receipt alone does not verify page content.",
                 "Muted",
                 True,
             )
@@ -922,6 +941,7 @@ class MainWindow(QMainWindow):
             row.addWidget(button)
         row.addStretch()
         row.addWidget(self.resume_button)
+        row.addWidget(_button("Computer Use", lambda: self._navigate(11)))
         row.addWidget(_button("Refresh", self.refresh))
         layout.addLayout(row)
         return page
@@ -1169,6 +1189,14 @@ class MainWindow(QMainWindow):
             "Allow explicitly requested website and search launches"
         )
         self.browser_actions_check.setChecked(getattr(self.settings, "browser_enabled", True))
+        self.computer_use_check = QCheckBox("Allow approved computer actions on this PC")
+        self.computer_use_check.setChecked(getattr(self.settings, "computer_use_enabled", False))
+        self.browser_automation_check = QCheckBox(
+            "Allow public-page control in JARVIS's separate browser session"
+        )
+        self.browser_automation_check.setChecked(
+            getattr(self.settings, "browser_automation_enabled", False)
+        )
         self.browser_choice = QComboBox()
         self.browser_choice.addItems(["default", "chrome", "edge", "firefox"])
         self.browser_choice.setCurrentText(getattr(self.settings, "default_browser", "default"))
@@ -1233,6 +1261,8 @@ class MainWindow(QMainWindow):
             ("Response style", self.speaking_style_choice),
             ("Desktop action permission", self.desktop_actions_check),
             ("Browser action permission", self.browser_actions_check),
+            ("Computer-use permission", self.computer_use_check),
+            ("Browser automation permission", self.browser_automation_check),
             ("Preferred browser", self.browser_choice),
             ("Search engine", self.search_engine_choice),
             ("Browser window", self.browser_window_check),
@@ -1248,6 +1278,16 @@ class MainWindow(QMainWindow):
                 "Advanced currently uses the same conservative policy. Folder creation always asks. "
                 "Speech models must be installed using the explicit setup command; the microphone button "
                 "never downloads one. CUDA requires compatible speech libraries.",
+                "Muted",
+                True,
+            )
+        )
+        layout.addWidget(
+            _label(
+                "Computer-use permissions start disabled. A new Notepad note always requires "
+                "review of its exact text and destination in a permitted folder. Browser automation "
+                "uses a separate session and may need its browser runtime installed. Reading a page "
+                "does not authorize downloads, login, external forms or communications.",
                 "Muted",
                 True,
             )
@@ -1301,6 +1341,8 @@ class MainWindow(QMainWindow):
             self.refresh_action_health()
         elif index == 10:
             self.browser_query.setFocus()
+        elif index in (4, 11):
+            self.refresh_computer_status(force=True)
 
     def _workflows_page(self) -> QWidget:
         scroll = QScrollArea()
@@ -1440,6 +1482,252 @@ class MainWindow(QMainWindow):
         )
         layout.addStretch()
         return page
+
+    def _computer_use_page(self) -> QWidget:
+        page = QFrame()
+        page.setObjectName("Panel")
+        layout = QVBoxLayout(page)
+        layout.addWidget(_label("COMPUTER USE", "Title"))
+        layout.addWidget(
+            _label(
+                "Ask in the Assistant by voice or text. The same approval and task history "
+                "apply here. Only supported, enabled actions can control this PC.",
+                "Muted",
+                True,
+            )
+        )
+        self.computer_control_status = _label("Control status · not checked", "Status", True)
+        self.computer_control_status.setTextFormat(Qt.TextFormat.PlainText)
+        self.computer_target = _label("Current target · none observed", "Muted", True)
+        self.computer_target.setTextFormat(Qt.TextFormat.PlainText)
+        self.computer_availability = _label("Executor availability · not checked", "Muted", True)
+        self.computer_availability.setTextFormat(Qt.TextFormat.PlainText)
+        layout.addWidget(self.computer_control_status)
+        layout.addWidget(self.computer_target)
+        layout.addWidget(self.computer_availability)
+        self.computer_human_status = _label(
+            "Human browser interaction · off. An observed login/CAPTCHA and approval are required.",
+            "Muted",
+            True,
+        )
+        self.computer_human_status.setTextFormat(Qt.TextFormat.PlainText)
+        layout.addWidget(self.computer_human_status)
+        human_row = QHBoxLayout()
+        self.computer_human_request_button = _button(
+            "Request human browser interaction",
+            lambda: self._explicit_tool("browser_user_interaction", {"enabled": True}),
+        )
+        self.computer_human_end_button = _button(
+            "End human interaction",
+            lambda: self._explicit_tool("browser_user_interaction", {"enabled": False}),
+        )
+        human_row.addWidget(self.computer_human_request_button)
+        human_row.addWidget(self.computer_human_end_button)
+        human_row.addStretch()
+        layout.addLayout(human_row)
+        self.computer_observation = QPlainTextEdit()
+        self.computer_observation.setReadOnly(True)
+        self.computer_observation.setPlaceholderText(
+            "No computer-use observation yet. Status checks do not capture screenshots, "
+            "type text or launch a browser."
+        )
+        layout.addWidget(self.computer_observation, 1)
+        layout.addWidget(
+            _label(
+                "Pause cancels active computer input at a safe boundary and blocks new computer "
+                "actions. Resume permits new requests; cancelled work is not replayed. "
+                "Stop also cancels other pending actions and mutes voice. Generic screen vision, "
+                "bulk file changes and coding automation are not available in this milestone.",
+                "Muted",
+                True,
+            )
+        )
+        row = QHBoxLayout()
+        self.computer_pause_button = _button("Pause actions", self.pause_computer_use)
+        self.computer_resume_button = _button("Resume new actions", self.resume_computer_use)
+        self.computer_stop_button = _button("Stop", self.emergency_stop, kind="Danger")
+        row.addWidget(self.computer_pause_button)
+        row.addWidget(self.computer_resume_button)
+        row.addWidget(self.computer_stop_button)
+        row.addStretch()
+        row.addWidget(_button("Tasks & approvals", lambda: self._navigate(1)))
+        row.addWidget(_button("Refresh", lambda: self.refresh_computer_status(force=True)))
+        layout.addLayout(row)
+        self._update_computer_controls()
+        return page
+
+    def _read_computer_status(self) -> dict[str, Any]:
+        status = getattr(self.service, "computer_status", None)
+        return status() if callable(status) else {"status": "unavailable"}
+
+    def refresh_computer_status(self, force=False) -> None:
+        if self._closing or any(
+            name in self._jobs
+            for name in ("settings", "computer-control", "emergency-stop", "resume")
+        ):
+            return
+        if not force and (
+            not self.isVisible()
+            or self.isMinimized()
+            or self.pages.currentIndex() not in (4, 7, 11)
+        ):
+            return
+        generation = self._computer_status_generation
+
+        def checked(result):
+            if generation == self._computer_status_generation:
+                self._show_computer_status(result)
+
+        def failed(error):
+            if generation == self._computer_status_generation:
+                self._show_computer_status({"status": "unavailable", "error": error})
+
+        self._run("computer-status", self._read_computer_status, checked, failed)
+
+    def _show_computer_status(self, status):
+        status = status if isinstance(status, dict) else {"status": "unavailable"}
+        self._computer_status = status
+        self._computer_paused = bool(status.get("paused", False))
+        components = {
+            name: value if isinstance(value := status.get(name), dict) else {}
+            for name in ("windows", "browser")
+        }
+        active = [
+            name for name, value in components.items() if value.get("busy") or value.get("active")
+        ]
+        if self._stopped:
+            control = (
+                "Stopping · active computer input is cancelling"
+                if active
+                else "Stopped · resume in Mission Control before making a new request"
+            )
+        elif self._computer_paused:
+            control = (
+                "Pausing · active input is cancelling; new computer actions are blocked"
+                if active
+                else "Paused · new computer actions are blocked"
+            )
+        elif active:
+            control = "Controlling · " + ", ".join(active)
+        elif components["browser"].get("manual_mode") is True:
+            control = "Human browser interaction · waiting for you; automated input is idle"
+        else:
+            control = "Idle · no computer input in progress"
+        if status.get("status") == "unavailable":
+            control = "Unavailable · computer-use service is not connected"
+        self.computer_control_status.setText(control)
+        targets = []
+        for name, value in components.items():
+            observation = value.get("last_observation")
+            observation = observation if isinstance(observation, dict) else {}
+            last_result = value.get("last_result")
+            last_result = last_result if isinstance(last_result, dict) else {}
+            target = (
+                value.get("target")
+                or value.get("current_url")
+                or observation.get("url")
+                or observation.get("title")
+                or last_result.get("path")
+            )
+            if target:
+                targets.append(f"{name}: {str(target)[:500]}")
+        self.computer_target.setText(
+            "Latest observed target · " + (" | ".join(targets) or "none observed")
+        )
+        states = []
+        for name, value in components.items():
+            enabled = getattr(
+                self.settings,
+                "computer_use_enabled" if name == "windows" else "browser_automation_enabled",
+                False,
+            )
+            observed = (
+                value.get("status")
+                or value.get("state")
+                or ("available" if value.get("available") else "not checked")
+            )
+            states.append(
+                f"{name.title()}: {observed} · {'enabled' if enabled else 'permission off'}"
+            )
+        self.computer_availability.setText("\n".join(states))
+        human = components["browser"].get("manual_mode") is True
+        self.computer_human_status.setText(
+            "HUMAN BROWSER INTERACTION ACTIVE\n" + BROWSER_HUMAN_GRANT
+            if human
+            else "Human browser interaction · off. An observed login/CAPTCHA and approval are required."
+        )
+        raw = json.dumps(status, indent=2, ensure_ascii=False, default=str)
+        # Adapters already bound observations; cap rendering to avoid an untrusted
+        # page or faulty component allocating unlimited Qt document blocks.
+        self.computer_observation.setPlainText(
+            raw[:32000]
+            + (
+                "\n[Display limited; inspect the task receipt for full evidence.]"
+                if len(raw) > 32000
+                else ""
+            )
+        )
+        self._update_computer_controls()
+        self._update_build_health()
+
+    def _update_computer_controls(self):
+        busy = any(
+            name in self._jobs
+            for name in ("computer-control", "emergency-stop", "resume", "settings")
+        )
+        allowed = not self._closing and not self._stopped and not busy
+        self.computer_pause_button.setEnabled(
+            allowed
+            and not self._computer_paused
+            and callable(getattr(self.service, "pause_computer_use", None))
+        )
+        self.computer_resume_button.setEnabled(
+            allowed
+            and self._computer_paused
+            and callable(getattr(self.service, "resume_computer_use", None))
+        )
+        self.computer_stop_button.setEnabled(not self._closing and not self._stopped)
+        browser = self._computer_status.get("browser", {})
+        browser = browser if isinstance(browser, dict) else {}
+        human = browser.get("manual_mode") is True
+        self.computer_human_request_button.setEnabled(
+            allowed
+            and not self._computer_paused
+            and not human
+            and browser.get("status") == "awaiting_user"
+            and getattr(self.settings, "computer_use_enabled", False)
+            and getattr(self.settings, "browser_automation_enabled", False)
+        )
+        self.computer_human_end_button.setEnabled(allowed and human)
+
+    def _computer_control(self, method):
+        if self._transition_busy() or self._closing or self._stopped:
+            return
+        action = getattr(self.service, method, None)
+        if not callable(action):
+            self._status("The computer-use service does not support this control.")
+            return
+        self._computer_status_generation += 1
+
+        def controlled(result):
+            self._computer_paused = method == "pause_computer_use"
+            if isinstance(result, dict):
+                self._show_computer_status(result)
+            self._status(
+                "Computer actions paused · new requests are blocked"
+                if self._computer_paused
+                else "Computer actions resumed · make a new request; cancelled tasks stay cancelled"
+            )
+            self.refresh()
+
+        self._run("computer-control", action, controlled)
+        self._update_computer_controls()
+
+    def pause_computer_use(self):
+        self._computer_control("pause_computer_use")
+
+    def resume_computer_use(self):
+        self._computer_control("resume_computer_use")
 
     def _applications_page(self) -> QWidget:
         scroll = QScrollArea()
@@ -1816,6 +2104,7 @@ class MainWindow(QMainWindow):
             )
         health["model_action_planning"] = getattr(self.settings, "model_action_planning", False)
         health["desktop_actions_enabled"] = getattr(self.settings, "desktop_actions_enabled", True)
+        health["computer_use"] = self._read_computer_status()
         return health
 
     def refresh_action_health(self):
@@ -1826,6 +2115,7 @@ class MainWindow(QMainWindow):
         self.action_diagnostics.setPlainText(
             json.dumps(health, indent=2, ensure_ascii=False, default=str)
         )
+        self.refresh_computer_status(force=True)
 
     def _business_page(self) -> QWidget:
         from .business import sample_summary
@@ -2050,6 +2340,8 @@ class MainWindow(QMainWindow):
             ("Pause microphone", lambda: self.voice_controller.stop()),
             ("Mute", lambda: self.voice_controller.mute()),
             ("Emergency stop", self.emergency_stop),
+            ("Pause computer actions", self.pause_computer_use),
+            ("Resume new computer actions", self.resume_computer_use),
         ]
         for title, _ in actions:
             commands.addItem(title)
@@ -2088,7 +2380,7 @@ class MainWindow(QMainWindow):
         active_jobs = [
             name
             for name in self._jobs
-            if name not in {"refresh", "health", "awareness", "audio-devices"}
+            if name not in {"refresh", "health", "awareness", "audio-devices", "computer-status"}
         ]
         pending = sum(task.get("state") == "awaiting_approval" for task in self._tasks)
         self.mission_summary.setText(
@@ -2553,7 +2845,10 @@ class MainWindow(QMainWindow):
             f"Built: {identity['build_date_utc']}\nExecutable: {identity['executable']}\n"
             f"Voice engine: {engine}\nWake: {voice} · phrase: {self.settings.wake_phrase}\n"
             f"Microphone: {self.voice_status.text()}\nBackend: {self.health_result['backend']}\n"
-            f"Speech model: {self.health_result['speech_model']}\nLast startup/voice error: {error or 'None reported'}"
+            f"Speech model: {self.health_result['speech_model']}\n"
+            f"Computer use: {self.computer_availability.text()}\n"
+            f"Control: {self.computer_control_status.text()}\n"
+            f"Last startup/voice error: {error or 'None reported'}"
         )
 
     def run_health_check(self) -> None:
@@ -2640,6 +2935,10 @@ class MainWindow(QMainWindow):
             self.save_settings_button.setEnabled(not self._closing)
         if name in {"application-write", "settings", "emergency-stop", "resume"}:
             self._select_application()
+        if name in {"computer-control", "settings", "emergency-stop", "resume"}:
+            self._update_computer_controls()
+            if not self._closing:
+                self.refresh_computer_status(force=True)
         if self._closing:
             self._poll_shutdown()
         elif hasattr(self, "voice_controller"):
@@ -2800,11 +3099,13 @@ class MainWindow(QMainWindow):
         if result.get("id"):
             self._last_task_id = result["id"]
             self._live_task_results[result["id"]] = result
-        self.task_detail.setPlainText(json.dumps(result, indent=2, ensure_ascii=False, default=str))
+        self.task_detail.setPlainText(self._task_review_text(result))
         self._status(
             f"Action {result.get('state', 'updated')} · review Mission Control for evidence"
         )
         self.refresh()
+        if str(result.get("tool", "")).startswith("browser_"):
+            self.refresh_computer_status(force=True)
         self.voice_controller.task_event(result)
 
     def _selected_task(self) -> dict[str, Any] | None:
@@ -2817,9 +3118,7 @@ class MainWindow(QMainWindow):
 
     def _select_task(self) -> None:
         task = self._selected_task()
-        self.task_detail.setPlainText(
-            json.dumps(task, indent=2, ensure_ascii=False, default=str) if task else ""
-        )
+        self.task_detail.setPlainText(self._task_review_text(task) if task else "")
         pending = bool(task and task.get("state") == "awaiting_approval")
         self.approve_button.setEnabled(pending and not self._stopped)
         self.reject_button.setEnabled(pending)
@@ -2836,13 +3135,158 @@ class MainWindow(QMainWindow):
             )
         )
 
+    @staticmethod
+    def _task_review_text(task):
+        evidence = json.dumps(task, indent=2, ensure_ascii=False, default=str)
+        if (
+            task.get("tool") == "browser_user_interaction"
+            and isinstance(task.get("arguments"), dict)
+            and task["arguments"].get("enabled") is True
+        ):
+            return BROWSER_HUMAN_GRANT + "\n\nExact pending permission:\n" + evidence
+        if task.get("tool") != "desktop_write_note":
+            return evidence
+        arguments = task.get("arguments")
+        arguments = arguments if isinstance(arguments, dict) else {}
+        return (
+            "NOTEPAD NOTE · REVIEW BEFORE APPROVING\n"
+            "Creates a new file using Notepad; existing files must not be overwritten.\n"
+            f"Exact destination: {arguments.get('path', '')}\n\n"
+            "Exact text to write:\n"
+            f"{arguments.get('text', '[Literal text is not stored in history. Choose Approve to review the live pending note.]')}\n\n"
+            "Recorded task and verification evidence:\n" + evidence
+        )
+
+    def _review_note_approval(self, task):
+        dialog = QDialog(self)
+        dialog.setObjectName("NoteApprovalReview")
+        dialog.setWindowTitle("Review Notepad note")
+        dialog.resize(640, 460)
+        layout = QVBoxLayout(dialog)
+        layout.addWidget(_label("Approve this exact new note once", "Title"))
+        preview = QPlainTextEdit()
+        preview.setReadOnly(True)
+        preview.setPlainText(self._task_review_text(task))
+        layout.addWidget(preview, 1)
+        row = QHBoxLayout()
+        row.addStretch()
+        cancel = _button("Keep pending", dialog.reject)
+        approve = _button("Approve exact note", dialog.accept, kind="Primary")
+        approve.setObjectName("ApproveExactNote")
+        row.addWidget(cancel)
+        row.addWidget(approve)
+        layout.addLayout(row)
+        accepted = dialog.exec() == QDialog.DialogCode.Accepted
+        dialog.deleteLater()
+        return accepted
+
+    def _review_browser_human_approval(self, task):
+        dialog = QDialog(self)
+        dialog.setObjectName("BrowserHumanApprovalReview")
+        dialog.setWindowTitle("Review temporary browser permission")
+        dialog.resize(660, 450)
+        layout = QVBoxLayout(dialog)
+        layout.addWidget(_label("Review five-minute browser permission", "Title"))
+        preview = QPlainTextEdit()
+        preview.setReadOnly(True)
+        preview.setPlainText(self._task_review_text(task))
+        layout.addWidget(preview, 1)
+        row = QHBoxLayout()
+        row.addStretch()
+        row.addWidget(_button("Keep pending", dialog.reject))
+        approve = _button("Allow for five minutes", dialog.accept, kind="Primary")
+        approve.setObjectName("ApproveHumanBrowserInteraction")
+        row.addWidget(approve)
+        layout.addLayout(row)
+        accepted = dialog.exec() == QDialog.DialogCode.Accepted
+        dialog.deleteLater()
+        return accepted
+
     def task_operation(self, operation: str) -> None:
         if self._transition_busy():
             return
         task = self._selected_task()
         if not task:
             return
-        task_id = task["id"]
+        if operation == "approve" and task.get("tool") == "desktop_write_note":
+            if self._stopped or task.get("state") != "awaiting_approval":
+                return
+            preview = getattr(self.service, "approval_preview", None)
+            if not callable(preview):
+                self._status("Live note preview is unavailable. No file was written.")
+                return
+            task_id = task["id"]
+
+            def reviewed(live):
+                arguments = live.get("arguments", {}) if isinstance(live, dict) else {}
+                if (
+                    not isinstance(live, dict)
+                    or live.get("id") != task_id
+                    or live.get("tool") != "desktop_write_note"
+                    or live.get("state") != "awaiting_approval"
+                    or not isinstance(arguments, dict)
+                    or not isinstance(arguments.get("path"), str)
+                    or not isinstance(arguments.get("text"), str)
+                ):
+                    self._status(
+                        "Live note text is unavailable or approval expired. No file was written."
+                    )
+                    return
+                if self._stopped:
+                    return
+                if not self._review_note_approval(live):
+                    self._status("Note approval remains pending · no file was written")
+                    return
+                if not self._stopped and not self._closing:
+                    self._perform_task_operation(operation, task_id)
+
+            self._run("note-approval-preview", lambda: preview(task_id), reviewed)
+            return
+        if (
+            operation == "approve"
+            and task.get("tool") == "browser_user_interaction"
+            and isinstance(task.get("arguments"), dict)
+            and task["arguments"].get("enabled") is True
+        ):
+            if self._stopped or task.get("state") != "awaiting_approval":
+                return
+            preview = getattr(self.service, "approval_preview", None)
+            if not callable(preview):
+                self._status(
+                    "Live browser permission preview is unavailable. Permission was not enabled."
+                )
+                return
+            task_id = task["id"]
+
+            def reviewed_browser(live):
+                arguments = live.get("arguments", {}) if isinstance(live, dict) else {}
+                if (
+                    not isinstance(live, dict)
+                    or live.get("id") != task_id
+                    or live.get("tool") != "browser_user_interaction"
+                    or live.get("state") != "awaiting_approval"
+                    or not isinstance(arguments, dict)
+                    or arguments.get("enabled") is not True
+                ):
+                    self._status(
+                        "Live browser permission approval expired or changed. Permission was not enabled."
+                    )
+                    return
+                if self._stopped:
+                    return
+                if not self._review_browser_human_approval(live):
+                    self._status(
+                        "Browser permission remains pending · read-only policy remains active"
+                    )
+                    return
+                if not self._stopped and not self._closing:
+                    self._perform_task_operation(operation, task_id)
+
+            self._run("browser-approval-preview", lambda: preview(task_id), reviewed_browser)
+            return
+        self._perform_task_operation(operation, task["id"])
+
+    def _perform_task_operation(self, operation, task_id):
 
         def operate():
             result = getattr(self.engine, operation)(task_id)
@@ -2856,6 +3300,8 @@ class MainWindow(QMainWindow):
 
     def emergency_stop(self) -> None:
         self._stopped = True
+        self._computer_status_generation += 1
+        self._update_computer_controls()
         self.interrupt()
         self.voice_controller.stop("mute")
         self._select_task()
@@ -3165,6 +3611,8 @@ class MainWindow(QMainWindow):
             speaking_style=self.speaking_style_choice.currentText(),
             desktop_actions_enabled=self.desktop_actions_check.isChecked(),
             browser_enabled=self.browser_actions_check.isChecked(),
+            computer_use_enabled=self.computer_use_check.isChecked(),
+            browser_automation_enabled=self.browser_automation_check.isChecked(),
             default_browser=self.browser_choice.currentText(),
             default_search_engine=self.search_engine_choice.currentText(),
             browser_new_window=self.browser_window_check.isChecked(),
@@ -3185,6 +3633,7 @@ class MainWindow(QMainWindow):
             "GEMINI_API_KEY": self.clear_gemini_key.isChecked(),
         }
         self.save_settings_button.setEnabled(False)
+        self._computer_status_generation += 1
         from .conversation import VoiceState
 
         previous_voice_state = self.voice_controller.session.state
@@ -3597,6 +4046,7 @@ class MainWindow(QMainWindow):
         self._visual_audio_timer.stop()
         self._system_timer.stop()
         self._action_activity_timer.stop()
+        self._computer_status_timer.stop()
         # The pooled runnables retain their own signals and never destroy a live QThread.
         self.centralWidget().setEnabled(False)
         self._close_deadline = time.monotonic() + max(5.0, self.settings.request_timeout + 5)
@@ -3617,6 +4067,7 @@ class MainWindow(QMainWindow):
             self._presence_timer.start()
             self._system_timer.start()
             self._action_activity_timer.start()
+            self._computer_status_timer.start()
             self.centralWidget().setEnabled(True)
             self.send_button.setEnabled("chat" not in self._jobs)
             self.mic_button.setEnabled("record" not in self._jobs)

@@ -1,6 +1,41 @@
-# Current development and transfer state — 15 October 2026
+# Current development and transfer state — 16 October 2026
 
-## Phase 4.5 reference UI — 0.4.5
+## Phase 5 first computer-use gates — 0.5.0
+
+Continue **codex/phase5-computer-use** in the existing public repository. Read
+PHASE5_RELEASE.md for architecture, exact install/run/build/test commands,
+permission grants, real supported tools and unfinished capabilities.
+
+- Added native Notepad/UIA note entry and Save As with actual content verification,
+  Playwright owner-thread isolated Chrome/Edge page/search/tab/history controls,
+  typed central tools, exact approvals, active cancellation and Computer Use UI.
+- Integrated shared-service real Notepad diagnostic passed: exact generic
+  `Testing JARVIS automation` note, native editing/save and verified actual file.
+  Unicode/symbol native adapter check separately verified 92 bytes. Existing
+  user tabs were preserved. Tests wrote inside `C:\Jarvis\build`, not Desktop.
+- Actual Chrome observed Python.org/GitHub, scroll/tabs/history/close and recreated
+  an isolated context after intentional owned-browser closure. Google produced
+  CAPTCHA; search-and-open remains unverified until its human gate succeeds.
+- The first read-only CAPTCHA diagnostic was intentionally stopped; available
+  evidence does not establish a spontaneous crash. A reviewed five-minute public
+  HTTPS POST handoff now allows human challenge interaction, including page
+  scripts, with explicit approval and Stop/expiry/next-action revocation.
+- Final source regression: **1,085 passed in 178.85s**, including final browser
+  grant races, tab-close binding and nested-body privacy cases. The focused
+  automation/UI suite separately passed 136 tests; these counts overlap.
+  Ruff and all 95 source/test/script format checks passed.
+  Dependency audit found no known vulnerabilities; local editable project skipped.
+- New permissions default off. Existing root/app grants, voice/Speak replies,
+  protected settings, memory and Mini remain. Note/page bodies are omitted from
+  persisted receipts. App packaging uses the now-tracked JARVIS.spec, including
+  Playwright's driver and Windows accessibility libraries.
+- Packaged Phase 5 and new human microphone acceptance are pending at this
+  source checkpoint. Do not substitute 0.4.5 acceptance for either gate.
+- Broad visual/general Windows, downloads/uploads/forms, file/PDF/spreadsheet,
+  coding, research and recurring autonomy remain incomplete. Follow the first
+  gate requirement before expanding these milestones.
+
+## Historical Phase 4.5 reference UI — 0.4.5
 
 Continue **codex/phase4-5-reference-ui** in the existing **public** repository
 https://github.com/roopawalamurtaza-droid/project-jarvis. The previous Phase 4

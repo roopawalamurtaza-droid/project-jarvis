@@ -14,6 +14,7 @@ from zoneinfo import ZoneInfo
 
 from .action_dispatcher import ALLOWED_ACTIONS, ActionDispatcher, action_summary
 from .action_router import parse_actions
+from .computer_commands import parse_computer_actions
 from .intelligence import SPEAKING_STYLES, describe_intent
 from .providers import (
     MAX_STREAM_TEXT_CHARS,
@@ -300,9 +301,10 @@ class JarvisService:
             session.lock.release()
 
     def _action_command(self, message, session_id, signal):
-        plan = parse_actions(
-            message, self.settings, context=self.actions.context(session_id), store=self.store
-        )
+        context = self.actions.context(session_id)
+        plan = parse_computer_actions(message, self.settings, context=context)
+        if plan is None:
+            plan = parse_actions(message, self.settings, context=context, store=self.store)
         if plan is None:
             return None
         response = {
@@ -661,6 +663,23 @@ class JarvisService:
         self.engine.emergency_stop()
         self.workflows.emergency_stop()
         self.actions.emergency_stop()
+
+    def computer_status(self):
+        return self.engine.registry.computer_status()
+
+    def pause_computer_use(self):
+        return self.engine.registry.computer_pause(True)
+
+    def resume_computer_use(self):
+        if self.stopped:
+            raise RuntimeError("Reset emergency stop before resuming new actions")
+        return self.engine.registry.computer_pause(False)
+
+    def approval_preview(self, task_id):
+        return self.engine.approval_preview(task_id)
+
+    def close_computer_use(self):
+        self.engine.registry.computer_close()
 
     def reset_stop(self) -> None:
         self.engine.reset_stop()

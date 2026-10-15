@@ -1,5 +1,14 @@
 # Security model
 
+Phase 5: computer/browser permissions default off. New Notepad notes require live
+exact path/text approval and never intentionally overwrite existing files. Owned
+browser sessions have public HTTPS GET/HEAD guards, no personal profile, and
+untrusted observations. A visible human challenge may receive an explicitly
+approved five-minute public HTTPS POST grant, including page scripts; this is
+not proof of human gesture provenance or an OS network sandbox. Stop/expiry/
+next action revoke it. Note/page bodies are omitted from persisted receipts.
+Read PHASE5_RELEASE.md for full limits; no unrestricted visual/shell/form executor.
+
 The app runs as the current Windows user. DPAPI protects API credentials at rest;
 other local data uses an ordinary SQLite database. Local administrator access or
 compromise of the current user's process can bypass these protections. This build
