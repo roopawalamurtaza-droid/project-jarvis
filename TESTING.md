@@ -2,9 +2,9 @@
 
 ## Phase 5 first gates — 0.5.0
 
-Final source suite: **1,085 passed in 178.85s**; focused automation/UI suite
+Final source suite: **1,090 passed in 167.52s**; focused automation/UI suite
 **136 passed** (overlapping). Frozen results are recorded in NEXT_STEPS.md after
-execution. New fake-adapter tests
+execution. Filename routing separately passed 63 overlapping regressions. New fake-adapter tests
 cover one-use live note approval, no persisted note/page body, consent revocation,
 path/overwrite refusal, shared voice/text grammar, safe cancellation/pause,
 observed browser targets/private DNS/redirect/method guards, challenge handling,
@@ -14,6 +14,9 @@ Actual shared-service Windows Notepad entry/Save As/content check passed, as did
 separate Unicode/symbol and native Chrome page/scroll/tab/history/recreation
 checks. These are actual executor checks, not fake-adapter tests. Google returned
 CAPTCHA: actual search-and-open remains blocked/unverified until the human gate.
+Final clean frozen runtime `4281e71f2668` repeated the actual Notepad save/byte
+check and Chrome page/scroll/tab controls. Google remained CAPTCHA-blocked; the
+diagnostic exited 2. Final native interface/local streaming/all 12 views passed.
 The disappearing initial browser was intentionally stopped; no spontaneous crash
 was established. New microphone, packaged human challenge, fresh-PC, localized/
 legacy Notepad, physical locked/elevated desktop and broader autonomy are not

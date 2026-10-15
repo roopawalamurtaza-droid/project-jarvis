@@ -26,17 +26,19 @@ Evidence labels:
   requested operation in this increment. An internal helper or generated answer
   does not count as a delivered capability.
 
-Final source regression passed **1,085 tests in 178.85 seconds**. The focused
-automation/UI suites are subsets; do not add their counts to this total. At
-this register's checkpoint the packaged candidate is being checked, and its
-acceptance is not established here. Earlier user-confirmed 0.4.5 voice/Mini
+Final source regression passed **1,090 tests in 167.52 seconds**. The focused
+automation/UI suites are subsets; do not add their counts to this total. The
+final clean frozen runtime `4281e71f2668` repeated actual note entry/save/byte
+verification and Chrome navigation/scroll/tabs. Its diagnostic exited 2 for the
+CAPTCHA-blocked search gate. Native UI/local streaming/all 12 views passed.
+Human Desktop-note and challenge acceptance remain pending. Earlier 0.4.5 voice/Mini
 acceptance is historical evidence, not a substitute for a 0.5.0 voice test.
 
 ## Basic desktop
 
 | No. | Required case | Current result and evidence | Remaining acceptance |
 | --- | --- | --- | --- |
-| 1 | Open Notepad. | **ACTUAL WINDOWS:** the native adapter and shared JarvisService/TaskEngine diagnostic launched or created an isolated empty Notepad window. Existing user tabs were preserved. | Repeat using the identified final 0.5.0 executable and the user's spoken objective. |
+| 1 | Open Notepad. | **ACTUAL WINDOWS:** the native adapter, shared-service diagnostic and final frozen executable created an isolated empty Notepad window. Existing user tabs were preserved. | Repeat using the user's spoken objective. |
 | 2 | Type a sentence into Notepad. | **ACTUAL WINDOWS:** UI Automation entered `Testing JARVIS automation`; the integrated diagnostic subsequently verified the saved exact text. A separate native Unicode/symbol note also passed. | Verify the complete voice-triggered objective on the final executable. |
 | 3 | Save the document to an approved folder. | **ACTUAL WINDOWS:** native File/Save As saved the generic note inside an isolated permitted folder under `C:\Jarvis\build`; actual UTF-8 bytes and content/hash matched. The Unicode/symbol adapter check separately verified 92 bytes. | The specifically requested `Desktop\jarvis-test.txt` destination is **HUMAN PENDING**. Resolve the actual configured Desktop, ensure it is allowed, and review exact path/text. No Desktop write is claimed. |
 | 4 | Open the saved document. | **HUMAN PENDING:** reading the saved bytes verified the save, but reopening the saved file in Notepad was not separately accepted. | Reopen the approved test note and inspect its displayed text. |

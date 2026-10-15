@@ -20,7 +20,7 @@ permission grants, real supported tools and unfinished capabilities.
   evidence does not establish a spontaneous crash. A reviewed five-minute public
   HTTPS POST handoff now allows human challenge interaction, including page
   scripts, with explicit approval and Stop/expiry/next-action revocation.
-- Final source regression: **1,085 passed in 178.85s**, including final browser
+- Final source regression: **1,090 passed in 167.52s**, including final browser
   grant races, tab-close binding and nested-body privacy cases. The focused
   automation/UI suite separately passed 136 tests; these counts overlap.
   Ruff and all 95 source/test/script format checks passed.
@@ -29,8 +29,46 @@ permission grants, real supported tools and unfinished capabilities.
   protected settings, memory and Mini remain. Note/page bodies are omitted from
   persisted receipts. App packaging uses the now-tracked JARVIS.spec, including
   Playwright's driver and Windows accessibility libraries.
-- Packaged Phase 5 and new human microphone acceptance are pending at this
-  source checkpoint. Do not substitute 0.4.5 acceptance for either gate.
+- The final packaged **0.5.0** build is runtime commit
+  **4281e71f2668542b7d63bbcfe7d3599803ca4115**, clean source, UTC build
+  **2026-10-15T23:11:19+00:00**, branch `codex/phase5-computer-use`.
+  All **39** Python source hashes and both assets match the checkout. Later
+  delivery-only documentation commits do not change these runtime bytes.
+- Final executable `C:\Jarvis\dist\JARVIS\JARVIS.exe`: **17,191,624 bytes**,
+  SHA256 **9a03c7f93e80c96121c4b9422bb6660b7bb0e8995ebf5ad8a34578e6ad540acc**.
+  Actual final frozen note/UIA save and file-byte comparison passed. Actual
+  browser navigation/scroll/new GitHub tab/tab enumeration passed. The diagnostic
+  exited **2** because its actual Google result gate was CAPTCHA-blocked; this
+  is a partial acceptance result, not a passed search gate.
+- Final native UI/local streaming/all 12 destinations passed, maximum sampled
+  timer gap **0.078s**. Packaged smoke passed on the prior runtime checkpoint.
+  The prior `a2db78d5a782` frozen checkpoint also passed full generated PCM
+  wake/VAD/offline STT/local AI/TTS/app/search-handoff/follow-up/sleep/mute/shutdown,
+  max sampled gap **1.734s**; the later change touches only filename parsing.
+  This is not human microphone/hearing or a universal latency benchmark.
+- Real local qwen3:8b proposed `desktop_write_note` through the shared typed
+  service and left it awaiting approval; no proposed action executed. Ollama
+  was initially stopped and its existing local service was started for checks.
+- Synthetic full-note STT reached the same parser. Plain filename dictation
+  dropped its hyphen; "dot txt" became `.text`. Explicit **jarvis hyphen test
+  dot T X T** produced `Jarvis-test.txt`. Spoken punctuation words are supported;
+  missing separators/case are not guessed. Review exact recognized text/name.
+- Normal launch through **Start JARVIS.cmd** verified final PID **47984**, exact
+  `dist\JARVIS\JARVIS.exe` with `.local`, responsive visible Command Center.
+  Existing settings/credential fingerprints and memory count were preserved
+  before requesting new permission changes. The accepted 0.4.5 complete folder
+  is backed up at `transfer/phase45-final-0.4.5`.
+- `transfer/JARVIS-Windows-0.5.0.zip`: **197,863,572 bytes**, **1,548** individually
+  hash-verified files, SHA256
+  **48fa171ac780368912c8a276a54bc732a6f35e50469540b4e1f74bb126ddc82a**.
+  Complete portable folder, not a signed installer or published GitHub Release.
+- New **human 0.5.0 Desktop-note microphone acceptance is requested and pending**.
+  The actual Desktop resolves through Windows and passes scoped-path checks,
+  but its folder still needs the user's explicit grant. No Desktop write is
+  claimed. Human CAPTCHA handoff/search-result acceptance also remains pending.
+  Do not substitute 0.4.5 voice or generated speech for these gates.
+- Read `docs/PHASE5_ACCEPTANCE.md` for all 33 cases and their exact evidence.
+  Source/history handoff retains this branch and excludes live data/keys/models.
 - Broad visual/general Windows, downloads/uploads/forms, file/PDF/spreadsheet,
   coding, research and recurring autonomy remain incomplete. Follow the first
   gate requirement before expanding these milestones.
