@@ -18,9 +18,15 @@ Final clean frozen runtime `4281e71f2668` repeated the actual Notepad save/byte
 check and Chrome page/scroll/tab controls. Google remained CAPTCHA-blocked; the
 diagnostic exited 2. Final native interface/local streaming/all 12 views passed.
 The disappearing initial browser was intentionally stopped; no spontaneous crash
-was established. New microphone, packaged human challenge, fresh-PC, localized/
-legacy Notepad, physical locked/elevated desktop and broader autonomy are not
-established by these tests. See PHASE5_RELEASE.md for commands and exact limits.
+was established. Packaged human challenge/search, fresh-PC, localized/legacy
+Notepad, physical locked/elevated desktop and broader autonomy are not established
+by these tests. See PHASE5_RELEASE.md for commands and exact limits.
+
+Separately, on **16 October 2026**, the user confirmed the final **0.5.0**
+hands-free wake → Notepad note → reviewed Desktop save and spoken reply:
+"The note saves and speaks successfully." This verifies that human scenario;
+the agent did not independently read the Desktop file. It does not establish
+the new browser voice sequence, broader acoustics or physical pause/cancel/Stop.
 
 ## Historical Phase 4.5 reference UI — 0.4.5
 

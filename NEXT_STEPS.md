@@ -62,11 +62,13 @@ permission grants, real supported tools and unfinished capabilities.
   hash-verified files, SHA256
   **48fa171ac780368912c8a276a54bc732a6f35e50469540b4e1f74bb126ddc82a**.
   Complete portable folder, not a signed installer or published GitHub Release.
-- New **human 0.5.0 Desktop-note microphone acceptance is requested and pending**.
-  The actual Desktop resolves through Windows and passes scoped-path checks,
-  but its folder still needs the user's explicit grant. No Desktop write is
-  claimed. Human CAPTCHA handoff/search-result acceptance also remains pending.
-  Do not substitute 0.4.5 voice or generated speech for these gates.
+- **Human 0.5.0 Desktop-note acceptance passed on 16 October 2026.** After
+  enabling the computer/browser permissions and granting the actual Desktop
+  folder, the user performed the requested hands-free Notepad note and reviewed
+  save, reporting: "The note saves and speaks successfully." This is human
+  confirmation of the live microphone/save/spoken reply; the agent did not
+  independently inspect the user's Desktop file. Human CAPTCHA handoff and
+  observed Google search-result acceptance remain pending.
 - Read `docs/PHASE5_ACCEPTANCE.md` for all 33 cases and their exact evidence.
   Source/history handoff retains this branch and excludes live data/keys/models.
 - Broad visual/general Windows, downloads/uploads/forms, file/PDF/spreadsheet,

@@ -7,6 +7,10 @@ separate Chrome/Edge session with actual page observations. New permissions
 default off; notes require exact approval. Read [Phase 5 behavior and evidence](PHASE5_RELEASE.md)
 and [NEXT_STEPS.md](NEXT_STEPS.md). The entire autonomy directive remains incomplete.
 
+On **16 October 2026**, the user confirmed the packaged **0.5.0** hands-free
+Notepad note, reviewed Desktop save and spoken reply worked. The new observed
+Google search-and-open gate still needs human acceptance after CAPTCHA handling.
+
 **Previous user-verified release: 0.4.5 · Reference UI.** Continue
 branch `codex/phase4-5-reference-ui` in the now-public repository. The native Qt
 interface recreates the supplied widescreen composition: cyan energy core,

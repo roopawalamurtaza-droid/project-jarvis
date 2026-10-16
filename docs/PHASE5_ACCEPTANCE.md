@@ -21,6 +21,8 @@ Evidence labels:
   or website scenario.
 - **HUMAN PENDING** means current 0.5.0 microphone interaction, physical controls
   or an unperformed acceptance step still needs direct verification.
+- **HUMAN CONFIRMED** means the user directly reported the specified scenario
+  worked on the launched 0.5.0 build; it is distinct from agent-observed checks.
 - **BLOCKED** means an actual attempted step could not complete.
 - **NOT IMPLEMENTED** means no supported end-to-end executor exists for the
   requested operation in this increment. An internal helper or generated answer
@@ -31,16 +33,18 @@ automation/UI suites are subsets; do not add their counts to this total. The
 final clean frozen runtime `4281e71f2668` repeated actual note entry/save/byte
 verification and Chrome navigation/scroll/tabs. Its diagnostic exited 2 for the
 CAPTCHA-blocked search gate. Native UI/local streaming/all 12 views passed.
-Human Desktop-note and challenge acceptance remain pending. Earlier 0.4.5 voice/Mini
-acceptance is historical evidence, not a substitute for a 0.5.0 voice test.
+On **16 October 2026**, the user confirmed the final 0.5.0 hands-free Notepad
+note, reviewed Desktop save and spoken reply: "The note saves and speaks
+successfully." Human browser challenge/search acceptance remains pending.
+Earlier 0.4.5 voice/Mini acceptance remains historical evidence.
 
 ## Basic desktop
 
 | No. | Required case | Current result and evidence | Remaining acceptance |
 | --- | --- | --- | --- |
-| 1 | Open Notepad. | **ACTUAL WINDOWS:** the native adapter, shared-service diagnostic and final frozen executable created an isolated empty Notepad window. Existing user tabs were preserved. | Repeat using the user's spoken objective. |
-| 2 | Type a sentence into Notepad. | **ACTUAL WINDOWS:** UI Automation entered `Testing JARVIS automation`; the integrated diagnostic subsequently verified the saved exact text. A separate native Unicode/symbol note also passed. | Verify the complete voice-triggered objective on the final executable. |
-| 3 | Save the document to an approved folder. | **ACTUAL WINDOWS:** native File/Save As saved the generic note inside an isolated permitted folder under `C:\Jarvis\build`; actual UTF-8 bytes and content/hash matched. The Unicode/symbol adapter check separately verified 92 bytes. | The specifically requested `Desktop\jarvis-test.txt` destination is **HUMAN PENDING**. Resolve the actual configured Desktop, ensure it is allowed, and review exact path/text. No Desktop write is claimed. |
+| 1 | Open Notepad. | **ACTUAL WINDOWS / HUMAN CONFIRMED:** the native adapter, shared-service diagnostic and final frozen executable created an isolated empty Notepad window. Existing user tabs were preserved. On 16 October, the user confirmed the complete spoken note/save scenario worked. | Passed for this supported Notepad scenario; general application control remains outside this gate. |
+| 2 | Type a sentence into Notepad. | **ACTUAL WINDOWS / HUMAN CONFIRMED:** UI Automation entered `Testing JARVIS automation`; the diagnostic verified exact saved text. A separate Unicode/symbol note passed. On 16 October, the user confirmed the requested hands-free note/save scenario. | Passed for the reviewed note; arbitrary dictation accuracy is not guaranteed. |
+| 3 | Save the document to an approved folder. | **ACTUAL WINDOWS / HUMAN CONFIRMED:** diagnostic native saves under `C:\Jarvis\build` matched actual bytes/hash; a separate Unicode/symbol check verified 92 bytes. On 16 October, after the Desktop grant and exact review, the user reported the requested Desktop note saved and spoke successfully. | Passed by human report for the reviewed Desktop note. The agent did not independently inspect that Desktop file. |
 | 4 | Open the saved document. | **HUMAN PENDING:** reading the saved bytes verified the save, but reopening the saved file in Notepad was not separately accepted. | Reopen the approved test note and inspect its displayed text. |
 | 5 | Close Notepad safely. | **HUMAN PENDING:** user documents/tabs were deliberately not closed for the diagnostics. A completed save is not proof of safe application closure. | Close only the designated saved test window, preserving other tabs and unsaved work. |
 
@@ -73,7 +77,7 @@ acceptance is historical evidence, not a substitute for a 0.5.0 voice test.
 
 | No. | Required case | Current result and evidence | Remaining acceptance |
 | --- | --- | --- | --- |
-| 21 | Execute a task from voice input. | **HUMAN PENDING for 0.5.0:** voice and typed requests share JarvisService and the central engine; parser/service tests pass, but the current native note diagnostic used text and explicitly opened no microphone. | Speak the full wake → Notepad → exact note → Desktop save objective; approve it and verify the file on the final build. |
+| 21 | Execute a task from voice input. | **HUMAN CONFIRMED for 0.5.0:** on 16 October, the user confirmed the requested hands-free wake → Notepad → reviewed note/Desktop save and spoken reply worked on the final build. Separate parser/service and native diagnostic checks also pass. | Passed for this scenario. Browser voice follow-ups and broad microphone/acoustic coverage remain separate. |
 | 22 | Accept a follow-up command. | **AUTOMATED ONLY / HUMAN PENDING:** observed-browser follow-up parsing and the shared service are covered by injected tests. Historical 0.4.5 hands-free follow-up acceptance does not accept new browser automation. | Speak a follow-up grounded in the actual owned tab, verify the action, then sleep without holding a button. |
 | 23 | Pause execution. | **AUTOMATED ONLY:** central and Qt tests cover pausing, cancellation at safe boundaries and blocking new computer actions. | Physically pause a controlled live 0.5.0 operation and verify no subsequent input occurs. |
 | 24 | Resume execution. | **AUTOMATED ONLY:** tests verify resume permits new explicit requests and does not replay cancelled work. | Physically resume and issue a new request; confirm the old cancelled task stays cancelled. |
@@ -105,21 +109,23 @@ They can be regenerated with the explicit commands in PHASE5_RELEASE.md:
 - `build/phase5-browser-final-native.json`: actual isolated Chrome observations
   and browser actions. Search-result success must not be inferred from direct
   navigation or general history success.
-- `build/phase5-release-tests.log`: complete 1,085-case source regression.
+- `build/phase5-final-release-tests.log`: complete 1,090-case source regression.
 - `tests/test_computer_windows.py`, `tests/test_computer_browser.py`,
   `tests/test_computer_engine.py` and `tests/test_phase5_desktop.py`: relevant
   injected-executor, policy, observation, privacy and Qt checks. These tests
   do not grant hardware acceptance.
 
-The first full gate remains the user's spoken wake → Notepad → exact note →
-actual approved Desktop save → file-content verification on the final build.
+The first gate was accepted by direct human report on 16 October 2026: spoken
+wake → Notepad → reviewed note → approved Desktop save and spoken reply on the
+final build. This is not an independent agent byte/hash inspection of Desktop.
 The second remains real Google search → observed official Python result click
 → verified final page, with any login/CAPTCHA handled by the human under the
 explicit temporary grant. No automated CAPTCHA bypass is allowed. A blocked
 gate stays blocked until that exact sequence has evidence.
 
-Fresh-PC installation, package/executable identity, physical pause/cancel and
-microphone acceptance must be recorded separately. Downloads/uploads, forms,
+Package/executable identity is recorded in NEXT_STEPS.md. Fresh-PC installation,
+physical pause/cancel/Stop, browser voice interaction and broader microphone
+acceptance remain separate. Downloads/uploads, forms,
 vision, document/research workflows, file organization, coding and recurring
 autonomy must remain explicitly incomplete until implemented and accepted.
 Never include credentials, browser sessions, personal notes, screenshots or

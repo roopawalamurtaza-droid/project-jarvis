@@ -14,8 +14,10 @@ coding/forms/downloads/recurring capabilities remain unimplemented. Never infer
 new automation acceptance from the historical 0.4.5 voice check below.
 The final clean runtime is `4281e71f2668`; 1,090 source tests passed and actual
 frozen note-save/browser controls were checked. Google result navigation remains
-CAPTCHA-blocked, and human Desktop-note/challenge checks are pending. Source,
-package and user-data preservation details are in the first NEXT_STEPS.md section.
+CAPTCHA-blocked. On 16 October 2026, the user confirmed the final 0.5.0 hands-free
+Notepad note, reviewed Desktop save and spoken reply worked. Human browser
+challenge/search acceptance remains pending. Source, package and user-data
+preservation details are in the first NEXT_STEPS.md section.
 
 ## Historical Phase 4.5 checkpoint — 15 October 2026
 

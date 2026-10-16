@@ -4,10 +4,12 @@
 
 Continue `codex/phase5-computer-use`. Native Notepad note-save/content verification
 and isolated browser navigation/scroll/tabs/history/recreation passed on Windows.
-Google search, packaged delivery and new voice acceptance require separate
-evidence, especially when CAPTCHA stops the search. See PHASE5_RELEASE.md and
-NEXT_STEPS.md. Broad vision/file/coding/download/form/scheduling milestones remain
-incomplete; preserve the existing UI/voice/memory and central grants.
+The final package was verified and launched; on 16 October 2026 the user confirmed
+its hands-free Notepad note, reviewed Desktop save and spoken reply worked.
+Observed Google search-and-open still requires human acceptance after CAPTCHA.
+See PHASE5_RELEASE.md and NEXT_STEPS.md. Broad vision, file, coding, download,
+form and scheduling milestones remain incomplete; preserve the existing
+UI/voice/memory and central grants.
 
 ## Historical Phase 4.5 UI release: 0.4.5
 

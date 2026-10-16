@@ -93,6 +93,12 @@ user tabs. The integrated JarvisService/TaskEngine diagnostic separately approve
 typed and saved `Testing JARVIS automation` and verified its actual file. Outputs
 were within `C:\Jarvis\build`, not the user's Desktop.
 
+Separately, on **16 October 2026**, the user confirmed the packaged **0.5.0**
+hands-free Notepad note, reviewed Desktop save and spoken reply worked:
+"The note saves and speaks successfully." This is direct human acceptance of
+that requested scenario; the agent did not independently inspect the Desktop
+file. It does not accept the new browser workflow or physical pause/cancel/Stop.
+
 Actual isolated Chrome verified Python.org and GitHub navigation, scrolling,
 tabs/switching/history/close and fresh-context recovery after intentional closure.
 The Google search gate is unverified whenever CAPTCHA blocks it. NEXT_STEPS.md
@@ -143,8 +149,9 @@ names remain `OPENAI_API_KEY` and `GEMINI_API_KEY`, with cloud consent.
 ```
 
 The browser diagnostic marks CAPTCHA as blocked, not passed; it captures no
-microphone and calls no cloud model. For human acceptance, enable both computer
-permissions in Settings, retain wake/Speak replies and add the actual Desktop to
+microphone and calls no cloud model. To repeat the accepted note check and
+complete browser acceptance, enable both computer permissions in Settings,
+retain wake/Speak replies and add the actual Desktop to
 permitted roots if needed. Speak the note objective, review its exact path/text
 in Mission Control and approve. Check the saved file. Request the official Python
 search, use the reviewed human mode for any challenge (refresh Chrome's challenge
